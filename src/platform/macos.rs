@@ -17,7 +17,13 @@ use core_graphics::{
     display::{kCGNullWindowID, kCGWindowListOptionOnScreenOnly, CGWindowListCopyWindowInfo},
     window::{kCGWindowName, kCGWindowOwnerPID},
 };
-use hbb_common::{anyhow::anyhow, bail, log, message_proto::Resolution};
+use hbb_common::{
+    allow_err,
+    anyhow::anyhow,
+    bail, log,
+    message_proto::{DisplayInfo, Resolution},
+    sysinfo::{Pid, Process, ProcessRefreshKind, System},
+};
 use include_dir::{include_dir, Dir};
 use objc::{class, msg_send, sel, sel_impl};
 use scrap::{libc::c_void, quartz::ffi::*};
@@ -301,6 +307,20 @@ pub fn get_cursor_pos() -> Option<(i32, i32)> {
     */
 }
 
+pub fn get_focused_display(displays: Vec<DisplayInfo>) -> Option<usize> {
+    unsafe {
+        let main_screen: id = msg_send![class!(NSScreen), mainScreen];
+        let screen: id = msg_send![main_screen, deviceDescription];
+        let id: id =
+            msg_send![screen, objectForKey: NSString::alloc(nil).init_str("NSScreenNumber")];
+        let display_name: u32 = msg_send![id, unsignedIntValue];
+
+        displays
+            .iter()
+            .position(|d| d.name == display_name.to_string())
+    }
+}
+
 pub fn get_cursor() -> ResultType<Option<u64>> {
     unsafe {
         let seed = CGSCurrentCursorSeed();
@@ -487,31 +507,41 @@ pub fn start_os_service() {
     crate::platform::macos::hide_dock();
     log::info!("Username: {}", crate::username());
     let mut sys = System::new();
-    sys.refresh_processes_specifics(ProcessRefreshKind::new());
     let path =
         std::fs::canonicalize(std::env::current_exe().unwrap_or_default()).unwrap_or_default();
+    let mut server = get_server_start_time(&mut sys, &path);
     let my_start_time = sys
         .process((std::process::id() as usize).into())
         .map(|p| p.start_time())
         .unwrap_or_default() as i64;
-    log::info!(
-        "Startime: {my_start_time} vs {:?}",
-        get_server_start_time(&mut sys, &path)
-    );
+    log::info!("Startime: {my_start_time} vs {:?}", server);
 
     std::thread::spawn(move || loop {
-        loop {
-            std::thread::sleep(std::time::Duration::from_secs(1));
-            let Some(start_time) = get_server_start_time(&mut sys, &path) else {
-                continue;
-            };
-
+        std::thread::sleep(std::time::Duration::from_secs(1));
+        if server.is_none() {
+            server = get_server_start_time(&mut sys, &path);
+        }
+        if let Some((start_time, pid)) = server {
             if my_start_time <= start_time {
                 // I tried add delegate (using tao and with its main loop0, but it works in normal mode, but not work as daemon
                 log::info!(
                     "Agent start later, {my_start_time} vs {start_time}, will restart --service to make delegate work",
                 );
                 std::process::exit(0);
+            }
+            // only refresh this pid and check if valid, no need to refresh all processes since refreshing all is expensive, about 10ms on my machine
+            if !sys.refresh_process_specifics(pid, ProcessRefreshKind::new()) {
+                server = None;
+                continue;
+            }
+            if let Some(p) = sys.process(pid.into()) {
+                if let Some(p) = get_server_start_time_of(p, &path) {
+                    server = Some((p, pid));
+                } else {
+                    server = None;
+                }
+            } else {
+                server = None;
             }
         }
     });
@@ -614,25 +644,31 @@ pub fn hide_dock() {
     }
 }
 
-use hbb_common::sysinfo::{ProcessRefreshKind, System};
 #[inline]
-fn get_server_start_time(sys: &mut System, path: &PathBuf) -> Option<i64> {
+fn get_server_start_time_of(p: &Process, path: &PathBuf) -> Option<i64> {
+    let cmd = p.cmd();
+    if cmd.len() <= 1 {
+        return None;
+    }
+    if &cmd[1] != "--server" {
+        return None;
+    }
+    let Ok(cur) = std::fs::canonicalize(p.exe()) else {
+        return None;
+    };
+    if &cur != path {
+        return None;
+    }
+    Some(p.start_time() as _)
+}
+
+#[inline]
+fn get_server_start_time(sys: &mut System, path: &PathBuf) -> Option<(i64, Pid)> {
     sys.refresh_processes_specifics(ProcessRefreshKind::new());
     for (_, p) in sys.processes() {
-        let cmd = p.cmd();
-        if cmd.len() <= 1 {
-            continue;
+        if let Some(t) = get_server_start_time_of(p, path) {
+            return Some((t, p.pid() as _));
         }
-        if &cmd[1] != "--server" {
-            continue;
-        }
-        let Ok(cur) = std::fs::canonicalize(p.exe()) else {
-            continue;
-        };
-        if &cur != path {
-            continue;
-        }
-        return Some(p.start_time() as _);
     }
     None
 }

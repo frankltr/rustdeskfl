@@ -7,8 +7,7 @@ use crate::common::update_clipboard;
 use crate::keyboard::client::map_key_to_control_key;
 #[cfg(target_os = "linux")]
 use crate::platform::linux::is_x11;
-#[cfg(all(target_os = "linux", feature = "linux_headless"))]
-#[cfg(not(any(feature = "flatpak", feature = "appimage")))]
+#[cfg(target_os = "linux")]
 use crate::platform::linux_desktop_manager;
 #[cfg(any(target_os = "windows", target_os = "linux"))]
 use crate::platform::WallPaperRemover;
@@ -24,15 +23,13 @@ use crate::{
 #[cfg(any(target_os = "android", target_os = "ios"))]
 use crate::{common::DEVICE_NAME, flutter::connection_manager::start_channel};
 use cidr_utils::cidr::IpCidr;
-#[cfg(all(target_os = "linux", feature = "linux_headless"))]
-#[cfg(not(any(feature = "flatpak", feature = "appimage")))]
+#[cfg(target_os = "linux")]
 use hbb_common::platform::linux::run_cmds;
 #[cfg(target_os = "android")]
 use hbb_common::protobuf::EnumOrUnknown;
 use hbb_common::{
     config::Config,
-    fs,
-    fs::can_enable_overwrite_detection,
+    fs::{self, can_enable_overwrite_detection},
     futures::{SinkExt, StreamExt},
     get_time, get_version_number,
     message_proto::{option_message::BoolOption, permission_info::Permission},
@@ -70,7 +67,7 @@ lazy_static::lazy_static! {
     static ref LOGIN_FAILURES: [Arc::<Mutex<HashMap<String, (i32, i32, i32)>>>; 2] = Default::default();
     static ref SESSIONS: Arc::<Mutex<HashMap<String, Session>>> = Default::default();
     static ref ALIVE_CONNS: Arc::<Mutex<Vec<i32>>> = Default::default();
-    static ref AUTHED_CONNS: Arc::<Mutex<Vec<(i32, AuthConnType)>>> = Default::default();
+    pub static ref AUTHED_CONNS: Arc::<Mutex<Vec<(i32, AuthConnType)>>> = Default::default();
     static ref SWITCH_SIDES_UUID: Arc::<Mutex<HashMap<String, (Instant, uuid::Uuid)>>> = Default::default();
     static ref WAKELOCK_SENDER: Arc::<Mutex<std::sync::mpsc::Sender<(usize, usize)>>> = Arc::new(Mutex::new(start_wakelock_thread()));
 }
@@ -225,8 +222,7 @@ pub struct Connection {
     options_in_login: Option<OptionMessage>,
     #[cfg(not(any(target_os = "ios")))]
     pressed_modifiers: HashSet<rdev::Key>,
-    #[cfg(all(target_os = "linux", feature = "linux_headless"))]
-    #[cfg(not(any(feature = "flatpak", feature = "appimage")))]
+    #[cfg(target_os = "linux")]
     linux_headless_handle: LinuxHeadlessHandle,
     closed: bool,
     delay_response_instant: Instant,
@@ -241,6 +237,9 @@ pub struct Connection {
     delayed_read_dir: Option<(String, bool)>,
     #[cfg(target_os = "macos")]
     retina: Retina,
+    follow_remote_cursor: bool,
+    follow_remote_window: bool,
+    multi_ui_session: bool,
 }
 
 impl ConnInner {
@@ -310,8 +309,7 @@ impl Connection {
         let (tx_cm_stream_ready, _rx_cm_stream_ready) = mpsc::channel(1);
         #[cfg(not(any(target_os = "android", target_os = "ios")))]
         let (_tx_desktop_ready, rx_desktop_ready) = mpsc::channel(1);
-        #[cfg(all(target_os = "linux", feature = "linux_headless"))]
-        #[cfg(not(any(feature = "flatpak", feature = "appimage")))]
+        #[cfg(target_os = "linux")]
         let linux_headless_handle =
             LinuxHeadlessHandle::new(_rx_cm_stream_ready, _tx_desktop_ready);
 
@@ -348,6 +346,9 @@ impl Connection {
             network_delay: 0,
             lock_after_session_end: false,
             show_remote_cursor: false,
+            follow_remote_cursor: false,
+            follow_remote_window: false,
+            multi_ui_session: false,
             ip: "".to_owned(),
             disable_audio: false,
             #[cfg(any(target_os = "windows", target_os = "linux", target_os = "macos"))]
@@ -371,8 +372,7 @@ impl Connection {
             options_in_login: None,
             #[cfg(not(any(target_os = "ios")))]
             pressed_modifiers: Default::default(),
-            #[cfg(all(target_os = "linux", feature = "linux_headless"))]
-            #[cfg(not(any(feature = "flatpak", feature = "appimage")))]
+            #[cfg(target_os = "linux")]
             linux_headless_handle,
             closed: false,
             delay_response_instant: Instant::now(),
@@ -666,8 +666,14 @@ impl Connection {
                             #[cfg(target_os = "macos")]
                             conn.retina.set_displays(&_pi.displays);
                         }
-                        #[cfg(target_os = "macos")]
                         Some(message::Union::CursorPosition(pos)) => {
+                            #[cfg(not(any(target_os = "android", target_os = "ios")))]
+                            {
+                                if conn.follow_remote_cursor {
+                                    conn.handle_cursor_switch_display(pos.clone()).await;
+                                }
+                            }
+                            #[cfg(target_os = "macos")]
                             if let Some(new_msg) = conn.retina.on_cursor_pos(&pos, conn.display_idx) {
                                 msg = Arc::new(new_msg);
                             }
@@ -1117,8 +1123,7 @@ impl Connection {
             if crate::platform::current_is_wayland() {
                 platform_additions.insert("is_wayland".into(), json!(true));
             }
-            #[cfg(feature = "linux_headless")]
-            #[cfg(not(any(feature = "flatpak", feature = "appimage")))]
+            #[cfg(target_os = "linux")]
             if crate::platform::is_headless_allowed() {
                 if linux_desktop_manager::is_headless() {
                     platform_additions.insert("headless".into(), json!(true));
@@ -1307,6 +1312,9 @@ impl Connection {
                 }
                 if !self.show_remote_cursor {
                     noperms.push(NAME_POS);
+                }
+                if !self.follow_remote_window {
+                    noperms.push(NAME_WINDOW_FOCUS);
                 }
                 if !self.clipboard_enabled() || !self.peer_keyboard_enabled() {
                     noperms.push(super::clipboard_service::NAME);
@@ -1656,14 +1664,9 @@ impl Connection {
             #[cfg(not(any(target_os = "android", target_os = "ios")))]
             self.try_start_cm_ipc();
 
-            #[cfg(any(
-                feature = "flatpak",
-                feature = "appimage",
-                not(all(target_os = "linux", feature = "linux_headless"))
-            ))]
+            #[cfg(not(target_os = "linux"))]
             let err_msg = "".to_owned();
-            #[cfg(all(target_os = "linux", feature = "linux_headless"))]
-            #[cfg(not(any(feature = "flatpak", feature = "appimage")))]
+            #[cfg(target_os = "linux")]
             let err_msg = self
                 .linux_headless_handle
                 .try_start_desktop(lr.os_login.as_ref());
@@ -1700,8 +1703,7 @@ impl Connection {
                 return false;
             } else if self.is_recent_session(false) {
                 if err_msg.is_empty() {
-                    #[cfg(all(target_os = "linux", feature = "linux_headless"))]
-                    #[cfg(not(any(feature = "flatpak", feature = "appimage")))]
+                    #[cfg(target_os = "linux")]
                     self.linux_headless_handle.wait_desktop_cm_ready().await;
                     self.send_logon_response().await;
                     self.try_start_cm(lr.my_id.clone(), lr.my_name.clone(), self.authorized);
@@ -1737,8 +1739,7 @@ impl Connection {
                 } else {
                     self.update_failure(failure, true, 0);
                     if err_msg.is_empty() {
-                        #[cfg(all(target_os = "linux", feature = "linux_headless"))]
-                        #[cfg(not(any(feature = "flatpak", feature = "appimage")))]
+                        #[cfg(target_os = "linux")]
                         self.linux_headless_handle.wait_desktop_cm_ready().await;
                         self.send_logon_response().await;
                         self.try_start_cm(lr.my_id, lr.my_name, self.authorized);
@@ -2581,6 +2582,14 @@ impl Connection {
             } else {
                 lock.capture_displays(self.inner.clone(), set, true, true);
             }
+            self.multi_ui_session = lock.get_subbed_displays_count(self.inner.id()) > 1;
+            if self.follow_remote_window {
+                lock.subscribe(
+                    NAME_WINDOW_FOCUS,
+                    self.inner.clone(),
+                    !self.multi_ui_session,
+                );
+            }
             drop(lock);
         }
     }
@@ -2766,6 +2775,24 @@ impl Connection {
                 }
             }
         }
+        #[cfg(not(any(target_os = "android", target_os = "ios")))]
+        if let Ok(q) = o.follow_remote_cursor.enum_value() {
+            if q != BoolOption::NotSet {
+                self.follow_remote_cursor = q == BoolOption::Yes;
+            }
+        }
+        if let Ok(q) = o.follow_remote_window.enum_value() {
+            if q != BoolOption::NotSet {
+                self.follow_remote_window = q == BoolOption::Yes;
+                if let Some(s) = self.server.upgrade() {
+                    s.write().unwrap().subscribe(
+                        NAME_WINDOW_FOCUS,
+                        self.inner.clone(),
+                        self.follow_remote_window,
+                    );
+                }
+            }
+        }
         if let Ok(q) = o.disable_audio.enum_value() {
             if q != BoolOption::NotSet {
                 self.disable_audio = q == BoolOption::Yes;
@@ -2883,7 +2910,7 @@ impl Connection {
                 }
             }
 
-            let turn_on_res = privacy_mode::turn_on_privacy(&impl_key, self.inner.id);
+            let turn_on_res = privacy_mode::turn_on_privacy(&impl_key, self.inner.id).await;
             match turn_on_res {
                 Some(Ok(res)) => {
                     if res {
@@ -3126,6 +3153,30 @@ impl Connection {
         self.inner.send(msg.into());
         self.supported_encoding_flag = (true, not_use);
     }
+
+    #[cfg(not(any(target_os = "android", target_os = "ios")))]
+    async fn handle_cursor_switch_display(&mut self, pos: CursorPosition) {
+        if self.multi_ui_session {
+            return;
+        }
+        let displays = super::display_service::get_sync_displays();
+        let d_index = displays.iter().position(|d| {
+            let scale = d.scale;
+            pos.x >= d.x
+                && pos.y >= d.y
+                && (pos.x - d.x) as f64 * scale < d.width as f64
+                && (pos.y - d.y) as f64 * scale < d.height as f64
+        });
+        if let Some(d_index) = d_index {
+            if self.display_idx != d_index {
+                let mut misc = Misc::new();
+                misc.set_follow_current_display(d_index as i32);
+                let mut msg_out = Message::new();
+                msg_out.set_misc(misc);
+                self.send(msg_out).await;
+            }
+        }
+    }
 }
 
 pub fn insert_switch_sides_uuid(id: String, uuid: uuid::Uuid) {
@@ -3162,8 +3213,7 @@ async fn start_ipc(
         let mut user = None;
 
         // Cm run as user, wait until desktop session is ready.
-        #[cfg(all(target_os = "linux", feature = "linux_headless"))]
-        #[cfg(not(any(feature = "flatpak", feature = "appimage")))]
+        #[cfg(target_os = "linux")]
         if crate::platform::is_headless_allowed() && linux_desktop_manager::is_headless() {
             let mut username = linux_desktop_manager::get_username();
             loop {
@@ -3481,8 +3531,7 @@ impl Drop for Connection {
     }
 }
 
-#[cfg(all(target_os = "linux", feature = "linux_headless"))]
-#[cfg(not(any(feature = "flatpak", feature = "appimage")))]
+#[cfg(target_os = "linux")]
 struct LinuxHeadlessHandle {
     pub is_headless_allowed: bool,
     pub is_headless: bool,
@@ -3491,11 +3540,10 @@ struct LinuxHeadlessHandle {
     pub tx_desktop_ready: mpsc::Sender<()>,
 }
 
-#[cfg(all(target_os = "linux", feature = "linux_headless"))]
-#[cfg(not(any(feature = "flatpak", feature = "appimage")))]
+#[cfg(target_os = "linux")]
 impl LinuxHeadlessHandle {
     pub fn new(rx_cm_stream_ready: mpsc::Receiver<()>, tx_desktop_ready: mpsc::Sender<()>) -> Self {
-        let is_headless_allowed = crate::platform::is_headless_allowed();
+        let is_headless_allowed = crate::is_server() && crate::platform::is_headless_allowed();
         let is_headless = is_headless_allowed && linux_desktop_manager::is_headless();
         Self {
             is_headless_allowed,
@@ -3551,6 +3599,11 @@ impl Retina {
 
     #[inline]
     fn on_mouse_event(&mut self, e: &mut MouseEvent, current: usize) {
+        let evt_type = e.mask & 0x7;
+        if evt_type == crate::input::MOUSE_TYPE_WHEEL {
+            // x and y are always 0, +1 or -1
+            return;
+        }
         let Some(d) = self.displays.get(current) else {
             return;
         };
