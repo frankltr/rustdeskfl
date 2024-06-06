@@ -2,7 +2,8 @@ use crate::{
     codec::{
         base_bitrate, codec_thread_num, enable_hwcodec_option, EncoderApi, EncoderCfg, Quality as Q,
     },
-    hw, CodecFormat, EncodeInput, ImageFormat, ImageRgb, Pixfmt, HW_STRIDE_ALIGN,
+    convert::*,
+    CodecFormat, EncodeInput, ImageFormat, ImageRgb, Pixfmt, HW_STRIDE_ALIGN,
 };
 use hbb_common::{
     anyhow::{anyhow, bail, Context},
@@ -14,14 +15,16 @@ use hbb_common::{
     serde_json, ResultType,
 };
 use hwcodec::{
-    common::DataFormat,
+    common::{
+        DataFormat,
+        Quality::{self, *},
+        RateControl::{self, *},
+    },
     ffmpeg::AVPixelFormat,
     ffmpeg_ram::{
         decode::{DecodeContext, DecodeFrame, Decoder},
         encode::{EncodeContext, EncodeFrame, Encoder},
-        CodecInfo,
-        Quality::{self, *},
-        RateControl::{self, *},
+        ffmpeg_linesize_offset_length, CodecInfo,
     },
 };
 
@@ -29,10 +32,8 @@ const DEFAULT_PIXFMT: AVPixelFormat = AVPixelFormat::AV_PIX_FMT_NV12;
 pub const DEFAULT_TIME_BASE: [i32; 2] = [1, 30];
 const DEFAULT_GOP: i32 = i32::MAX;
 const DEFAULT_HW_QUALITY: Quality = Quality_Default;
-#[cfg(target_os = "android")]
-const DEFAULT_RC: RateControl = RC_VBR; // android cbr poor quality
-#[cfg(not(target_os = "android"))]
-const DEFAULT_RC: RateControl = RC_CBR;
+
+crate::generate_call_macro!(call_yuv, false);
 
 #[derive(Debug, Clone)]
 pub struct HwRamEncoderConfig {
@@ -46,12 +47,10 @@ pub struct HwRamEncoderConfig {
 
 pub struct HwRamEncoder {
     encoder: Encoder,
-    name: String,
     pub format: DataFormat,
     pub pixfmt: AVPixelFormat,
-    width: u32,
-    height: u32,
     bitrate: u32, //kbs
+    config: HwRamEncoderConfig,
 }
 
 impl EncoderApi for HwRamEncoder {
@@ -61,13 +60,14 @@ impl EncoderApi for HwRamEncoder {
     {
         match cfg {
             EncoderCfg::HWRAM(config) => {
+                let rc = Self::rate_control(&config);
                 let b = Self::convert_quality(&config.name, config.quality);
                 let base_bitrate = base_bitrate(config.width as _, config.height as _);
                 let mut bitrate = base_bitrate * b / 100;
                 if base_bitrate <= 0 {
                     bitrate = base_bitrate;
                 }
-                bitrate = Self::check_bitrate_range(&config.name, bitrate);
+                bitrate = Self::check_bitrate_range(&config, bitrate);
                 let gop = config.keyframe_interval.unwrap_or(DEFAULT_GOP as _) as i32;
                 let ctx = EncodeContext {
                     name: config.name.clone(),
@@ -80,7 +80,8 @@ impl EncoderApi for HwRamEncoder {
                     timebase: DEFAULT_TIME_BASE,
                     gop,
                     quality: DEFAULT_HW_QUALITY,
-                    rc: DEFAULT_RC,
+                    rc,
+                    q: -1,
                     thread_count: codec_thread_num(16) as _, // ffmpeg's thread_count is used for cpu
                 };
                 let format = match Encoder::format_from_name(config.name.clone()) {
@@ -95,12 +96,10 @@ impl EncoderApi for HwRamEncoder {
                 match Encoder::new(ctx.clone()) {
                     Ok(encoder) => Ok(HwRamEncoder {
                         encoder,
-                        name: config.name,
                         format,
                         pixfmt: ctx.pixfmt,
-                        width: ctx.width as _,
-                        height: ctx.height as _,
                         bitrate,
+                        config,
                     }),
                     Err(_) => Err(anyhow!(format!("Failed to create encoder"))),
                 }
@@ -172,13 +171,14 @@ impl EncoderApi for HwRamEncoder {
     }
 
     fn set_quality(&mut self, quality: crate::codec::Quality) -> ResultType<()> {
-        let b = Self::convert_quality(&self.name, quality);
-        let mut bitrate = base_bitrate(self.width as _, self.height as _) * b / 100;
+        let b = Self::convert_quality(&self.config.name, quality);
+        let mut bitrate = base_bitrate(self.config.width as _, self.config.height as _) * b / 100;
         if bitrate > 0 {
-            bitrate = Self::check_bitrate_range(&self.name, bitrate);
+            bitrate = Self::check_bitrate_range(&self.config, self.bitrate);
             self.encoder.set_bitrate(bitrate as _).ok();
             self.bitrate = bitrate;
         }
+        self.config.quality = quality;
         Ok(())
     }
 
@@ -189,17 +189,21 @@ impl EncoderApi for HwRamEncoder {
     fn support_abr(&self) -> bool {
         ["qsv", "vaapi", "mediacodec"]
             .iter()
-            .all(|&x| !self.name.contains(x))
+            .all(|&x| !self.config.name.contains(x))
     }
 
     fn support_changing_quality(&self) -> bool {
         ["vaapi", "mediacodec"]
             .iter()
-            .all(|&x| !self.name.contains(x))
+            .all(|&x| !self.config.name.contains(x))
     }
 
     fn latency_free(&self) -> bool {
-        !self.name.contains("mediacodec")
+        !self.config.name.contains("mediacodec")
+    }
+
+    fn is_hardware(&self) -> bool {
+        true
     }
 }
 
@@ -236,6 +240,14 @@ impl HwRamEncoder {
         }
     }
 
+    fn rate_control(_config: &HwRamEncoderConfig) -> RateControl {
+        #[cfg(target_os = "android")]
+        if _config.name.contains("mediacodec") {
+            return RC_VBR;
+        }
+        RC_CBR
+    }
+
     pub fn convert_quality(name: &str, quality: crate::codec::Quality) -> u32 {
         use crate::codec::Quality;
         let quality = match quality {
@@ -245,28 +257,31 @@ impl HwRamEncoder {
             Quality::Custom(b) => b,
         };
         let factor = if name.contains("mediacodec") {
-            if name.contains("h264") {
-                6
-            } else {
-                3
-            }
+            // https://stackoverflow.com/questions/26110337/what-are-valid-bit-rates-to-set-for-mediacodec?rq=3
+            5
         } else {
             1
         };
         quality * factor
     }
 
-    pub fn check_bitrate_range(name: &str, bitrate: u32) -> u32 {
+    pub fn check_bitrate_range(_config: &HwRamEncoderConfig, bitrate: u32) -> u32 {
         #[cfg(target_os = "android")]
-        if name.contains("mediacodec") {
+        if _config.name.contains("mediacodec") {
             let info = crate::android::ffi::get_codec_info();
             if let Some(info) = info {
-                if let Some(codec) = info.codecs.iter().find(|c| c.name == name && c.is_encoder) {
-                    if bitrate > codec.max_bitrate {
-                        return codec.max_bitrate;
-                    }
-                    if bitrate < codec.min_bitrate {
-                        return codec.min_bitrate;
+                if let Some(codec) = info
+                    .codecs
+                    .iter()
+                    .find(|c| Some(c.name.clone()) == _config.mc_name && c.is_encoder)
+                {
+                    if codec.max_bitrate > codec.min_bitrate {
+                        if bitrate > codec.max_bitrate {
+                            return codec.max_bitrate;
+                        }
+                        if bitrate < codec.min_bitrate {
+                            return codec.min_bitrate;
+                        }
                     }
                 }
             }
@@ -356,52 +371,98 @@ impl HwRamDecoderImage<'_> {
     // rgb [in/out] fmt and stride must be set in ImageRgb
     pub fn to_fmt(&self, rgb: &mut ImageRgb, i420: &mut Vec<u8>) -> ResultType<()> {
         let frame = self.frame;
-        rgb.w = frame.width as _;
-        rgb.h = frame.height as _;
-        // take dst_stride into account when you convert
-        let dst_stride = rgb.stride();
+        let width = frame.width;
+        let height = frame.height;
+        rgb.w = width as _;
+        rgb.h = height as _;
+        let dst_align = rgb.align();
+        let bytes_per_row = (rgb.w * 4 + dst_align - 1) & !(dst_align - 1);
+        rgb.raw.resize(rgb.h * bytes_per_row, 0);
         match frame.pixfmt {
-            AVPixelFormat::AV_PIX_FMT_NV12 => hw::hw_nv12_to(
-                rgb.fmt(),
-                frame.width as _,
-                frame.height as _,
-                &frame.data[0],
-                &frame.data[1],
-                frame.linesize[0] as _,
-                frame.linesize[1] as _,
-                &mut rgb.raw as _,
-                i420,
-                HW_STRIDE_ALIGN,
-            )?,
+            AVPixelFormat::AV_PIX_FMT_NV12 => {
+                // I420ToARGB is much faster than NV12ToARGB in tests on Windows
+                if cfg!(windows) {
+                    let Ok((linesize_i420, offset_i420, len_i420)) = ffmpeg_linesize_offset_length(
+                        AVPixelFormat::AV_PIX_FMT_YUV420P,
+                        width as _,
+                        height as _,
+                        HW_STRIDE_ALIGN,
+                    ) else {
+                        bail!("failed to get i420 linesize, offset, length");
+                    };
+                    i420.resize(len_i420 as _, 0);
+                    let i420_offset_y = unsafe { i420.as_ptr().add(0) as _ };
+                    let i420_offset_u = unsafe { i420.as_ptr().add(offset_i420[0] as _) as _ };
+                    let i420_offset_v = unsafe { i420.as_ptr().add(offset_i420[1] as _) as _ };
+                    call_yuv!(NV12ToI420(
+                        frame.data[0].as_ptr(),
+                        frame.linesize[0],
+                        frame.data[1].as_ptr(),
+                        frame.linesize[1],
+                        i420_offset_y,
+                        linesize_i420[0],
+                        i420_offset_u,
+                        linesize_i420[1],
+                        i420_offset_v,
+                        linesize_i420[2],
+                        width,
+                        height,
+                    ));
+                    let f = match rgb.fmt() {
+                        ImageFormat::ARGB => I420ToARGB,
+                        ImageFormat::ABGR => I420ToABGR,
+                        _ => bail!("unsupported format: {:?} -> {:?}", frame.pixfmt, rgb.fmt()),
+                    };
+                    call_yuv!(f(
+                        i420_offset_y,
+                        linesize_i420[0],
+                        i420_offset_u,
+                        linesize_i420[1],
+                        i420_offset_v,
+                        linesize_i420[2],
+                        rgb.raw.as_mut_ptr(),
+                        bytes_per_row as _,
+                        width,
+                        height,
+                    ));
+                } else {
+                    let f = match rgb.fmt() {
+                        ImageFormat::ARGB => NV12ToARGB,
+                        ImageFormat::ABGR => NV12ToABGR,
+                        _ => bail!("unsupported format: {:?} -> {:?}", frame.pixfmt, rgb.fmt()),
+                    };
+                    call_yuv!(f(
+                        frame.data[0].as_ptr(),
+                        frame.linesize[0],
+                        frame.data[1].as_ptr(),
+                        frame.linesize[1],
+                        rgb.raw.as_mut_ptr(),
+                        bytes_per_row as _,
+                        width,
+                        height,
+                    ));
+                }
+            }
             AVPixelFormat::AV_PIX_FMT_YUV420P => {
-                hw::hw_i420_to(
-                    rgb.fmt(),
-                    frame.width as _,
-                    frame.height as _,
-                    &frame.data[0],
-                    &frame.data[1],
-                    &frame.data[2],
-                    frame.linesize[0] as _,
-                    frame.linesize[1] as _,
-                    frame.linesize[2] as _,
-                    &mut rgb.raw as _,
-                )?;
+                let f = match rgb.fmt() {
+                    ImageFormat::ARGB => I420ToARGB,
+                    ImageFormat::ABGR => I420ToABGR,
+                    _ => bail!("unsupported format: {:?} -> {:?}", frame.pixfmt, rgb.fmt()),
+                };
+                call_yuv!(f(
+                    frame.data[0].as_ptr(),
+                    frame.linesize[0],
+                    frame.data[1].as_ptr(),
+                    frame.linesize[1],
+                    frame.data[2].as_ptr(),
+                    frame.linesize[2],
+                    rgb.raw.as_mut_ptr(),
+                    bytes_per_row as _,
+                    width,
+                    height,
+                ));
             }
         }
-        Ok(())
-    }
-
-    pub fn bgra(&self, bgra: &mut Vec<u8>, i420: &mut Vec<u8>) -> ResultType<()> {
-        let mut rgb = ImageRgb::new(ImageFormat::ARGB, 1);
-        self.to_fmt(&mut rgb, i420)?;
-        *bgra = rgb.raw;
-        Ok(())
-    }
-
-    pub fn rgba(&self, rgba: &mut Vec<u8>, i420: &mut Vec<u8>) -> ResultType<()> {
-        let mut rgb = ImageRgb::new(ImageFormat::ABGR, 1);
-        self.to_fmt(&mut rgb, i420)?;
-        *rgba = rgb.raw;
         Ok(())
     }
 }
@@ -508,7 +569,8 @@ pub fn check_available_hwcodec() {
         timebase: DEFAULT_TIME_BASE,
         gop: DEFAULT_GOP,
         quality: DEFAULT_HW_QUALITY,
-        rc: DEFAULT_RC,
+        rc: RC_CBR,
+        q: -1,
         thread_count: 4,
     };
     #[cfg(feature = "vram")]
