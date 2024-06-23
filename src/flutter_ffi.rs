@@ -1194,8 +1194,8 @@ pub fn main_change_language(lang: String) {
     send_to_cm(&crate::ipc::Data::Language(lang));
 }
 
-pub fn main_video_save_directory(root: bool) -> String {
-    video_save_directory(root)
+pub fn main_video_save_directory(root: bool) -> SyncReturn<String> {
+    SyncReturn(video_save_directory(root))
 }
 
 pub fn main_set_user_default_option(key: String, value: String) {
@@ -1837,11 +1837,6 @@ pub fn main_current_is_wayland() -> SyncReturn<bool> {
 
 pub fn main_is_login_wayland() -> SyncReturn<bool> {
     SyncReturn(is_login_wayland())
-}
-
-pub fn main_start_pa() {
-    #[cfg(target_os = "linux")]
-    std::thread::spawn(crate::ipc::start_pa);
 }
 
 pub fn main_hide_docker() -> SyncReturn<bool> {

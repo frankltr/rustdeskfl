@@ -943,7 +943,7 @@ class RustdeskImpl {
     throw UnimplementedError();
   }
 
-  Future<String> mainVideoSaveDirectory({required bool root, dynamic hint}) {
+  String mainVideoSaveDirectory({required bool root, dynamic hint}) {
     throw UnimplementedError();
   }
 
@@ -1410,10 +1410,6 @@ class RustdeskImpl {
 
   bool mainIsLoginWayland({dynamic hint}) {
     return false;
-  }
-
-  Future<void> mainStartPa({dynamic hint}) {
-    throw UnimplementedError();
   }
 
   bool mainHideDocker({dynamic hint}) {
