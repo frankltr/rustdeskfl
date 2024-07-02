@@ -1797,7 +1797,7 @@ void changeBot({Function()? callback}) async {
       autofocus: true,
       controller: controller,
       decoration: InputDecoration(
-        hintText: translate('Token'), // 使用hintText设置占位符文本
+        hintText: translate('Token'),
       ),
     );
 
@@ -2185,6 +2185,34 @@ void setSharedAbPasswordDialog(String abName, Peer peer) {
       ],
       onSubmit: isInputEmpty.value ? null : () => change(controller.text),
       onCancel: cancel,
+    );
+  });
+}
+
+void CommonConfirmDialog(OverlayDialogManager dialogManager, String content,
+    VoidCallback onConfirm) {
+  dialogManager.show((setState, close, context) {
+    submit() {
+      close();
+      onConfirm.call();
+    }
+
+    return CustomAlertDialog(
+      content: Row(
+        children: [
+          Expanded(
+            child: Text(content,
+                style: const TextStyle(fontSize: 15),
+                textAlign: TextAlign.start),
+          ),
+        ],
+      ).marginOnly(bottom: 12),
+      actions: [
+        dialogButton(translate("Cancel"), onPressed: close, isOutline: true),
+        dialogButton(translate("OK"), onPressed: submit),
+      ],
+      onSubmit: submit,
+      onCancel: close,
     );
   });
 }
