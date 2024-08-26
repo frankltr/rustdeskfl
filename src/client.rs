@@ -65,7 +65,7 @@ use crate::{
     check_port,
     common::input::{MOUSE_BUTTON_LEFT, MOUSE_BUTTON_RIGHT, MOUSE_TYPE_DOWN, MOUSE_TYPE_UP},
     create_symmetric_key_msg, decode_id_pk, get_rs_pk, is_keyboard_mode_supported, secure_tcp,
-    ui_interface::{get_buildin_option, use_texture_render},
+    ui_interface::{get_builtin_option, use_texture_render},
     ui_session_interface::{InvokeUiSession, Session},
 };
 
@@ -112,6 +112,9 @@ pub const SCRAP_OTHER_VERSION_OR_X11_REQUIRED: &str =
     "Wayland requires higher version of linux distro. Please try X11 desktop or change your OS.";
 pub const SCRAP_X11_REQUIRED: &str = "x11 expected";
 pub const SCRAP_X11_REF_URL: &str = "https://rustdesk.com/docs/en/manual/linux/#x11-required";
+
+#[cfg(not(any(target_os = "android", target_os = "linux")))]
+pub const AUDIO_BUFFER_MS: usize = 150;
 
 #[cfg(feature = "flutter")]
 #[cfg(not(any(target_os = "android", target_os = "ios")))]
@@ -903,8 +906,30 @@ struct AudioBuffer(pub Arc<std::sync::Mutex<ringbuf::HeapRb<f32>>>);
 impl Default for AudioBuffer {
     fn default() -> Self {
         Self(Arc::new(std::sync::Mutex::new(
-            ringbuf::HeapRb::<f32>::new(48000 * 2), // 48000hz, 2 channel, 1 second
+            ringbuf::HeapRb::<f32>::new(48000 * 2 * AUDIO_BUFFER_MS / 1000), // 48000hz, 2 channel
         )))
+    }
+}
+
+#[cfg(not(any(target_os = "android", target_os = "linux")))]
+impl AudioBuffer {
+    pub fn resize(&self, sample_rate: usize, channels: usize) {
+        let capacity = sample_rate * channels * AUDIO_BUFFER_MS / 1000;
+        let old_capacity = self.0.lock().unwrap().capacity();
+        if capacity != old_capacity {
+            *self.0.lock().unwrap() = ringbuf::HeapRb::<f32>::new(capacity);
+            log::info!("Audio buffer resized from {old_capacity} to {capacity}");
+        }
+    }
+
+    // clear when full to avoid long time noise
+    #[inline]
+    pub fn clear_if_full(&self) {
+        let full = self.0.lock().unwrap().is_full();
+        if full {
+            self.0.lock().unwrap().clear();
+            log::trace!("Audio buffer cleared");
+        }
     }
 }
 
@@ -1052,6 +1077,7 @@ impl AudioHandler {
                             self.device_channel,
                         );
                     }
+                    self.audio_buffer.clear_if_full();
                     audio_buffer.lock().unwrap().push_slice_overwrite(&buffer);
                 }
                 #[cfg(target_os = "android")]
@@ -1080,6 +1106,8 @@ impl AudioHandler {
             // too many errors, will improve later
             log::trace!("an error occurred on stream: {}", err);
         };
+        self.audio_buffer
+            .resize(config.sample_rate.0 as _, config.channels as _);
         let audio_buffer = self.audio_buffer.0.clone();
         let ready = self.ready.clone();
         let timeout = None;
@@ -1301,6 +1329,7 @@ pub struct LoginConfigHandler {
     pub peer_info: Option<PeerInfo>,
     password_source: PasswordSource, // where the sent password comes from
     shared_password: Option<String>, // Store the shared password
+    pub enable_trusted_devices: bool,
 }
 
 impl Deref for LoginConfigHandler {
@@ -2109,13 +2138,17 @@ impl LoginConfigHandler {
         } else {
             (my_id, self.id.clone())
         };
-        let mut display_name = get_buildin_option(config::keys::OPTION_DISPLAY_NAME);
+        let mut display_name = get_builtin_option(config::keys::OPTION_DISPLAY_NAME);
         if display_name.is_empty() {
-            display_name = serde_json::from_str::<HashMap<String, String>>(
-                &LocalConfig::get_option("user_info"),
-            )
-            .map(|mut x| x.remove("name").unwrap_or_default())
-            .unwrap_or_default();
+            display_name =
+                serde_json::from_str::<serde_json::Value>(&LocalConfig::get_option("user_info"))
+                    .map(|x| {
+                        x.get("name")
+                            .map(|x| x.as_str().unwrap_or_default())
+                            .unwrap_or_default()
+                            .to_owned()
+                    })
+                    .unwrap_or_default();
         }
         if display_name.is_empty() {
             display_name = crate::username();
@@ -2124,6 +2157,11 @@ impl LoginConfigHandler {
         let my_platform = whoami::platform().to_string();
         #[cfg(target_os = "android")]
         let my_platform = "Android".into();
+        let hwid = if self.get_option("trust-this-device") == "Y" {
+            crate::get_hwid()
+        } else {
+            Bytes::new()
+        };
         let mut lr = LoginRequest {
             username: pure_id,
             password: password.into(),
@@ -2139,6 +2177,7 @@ impl LoginConfigHandler {
                 ..Default::default()
             })
             .into(),
+            hwid,
             ..Default::default()
         };
         match self.conn_type {
@@ -2795,6 +2834,12 @@ pub fn handle_login_error(
         interface.msgbox("re-input-password", err, "Do you want to enter again?", "");
         true
     } else if err == LOGIN_MSG_2FA_WRONG || err == REQUIRE_2FA {
+        let enabled = lc.read().unwrap().get_option("trust-this-device") == "Y";
+        if enabled {
+            lc.write()
+                .unwrap()
+                .set_option("trust-this-device".to_string(), "".to_string());
+        }
         interface.msgbox("input-2fa", err, "", "");
         true
     } else if LOGIN_ERROR_MAP.contains_key(err) {
@@ -2888,7 +2933,7 @@ pub async fn handle_hash(
 
     if password.is_empty() {
         let p =
-            crate::ui_interface::get_buildin_option(config::keys::OPTION_DEFAULT_CONNECT_PASSWORD);
+            crate::ui_interface::get_builtin_option(config::keys::OPTION_DEFAULT_CONNECT_PASSWORD);
         if !p.is_empty() {
             let mut hasher = Sha256::new();
             hasher.update(p.clone());
@@ -3135,6 +3180,7 @@ pub enum Data {
     NewVoiceCall,
     CloseVoiceCall,
     ResetDecoder(Option<usize>),
+    RenameFile((i32, String, String, bool)),
 }
 
 /// Keycode for key events.
@@ -3360,4 +3406,154 @@ async fn hc_connection_(
         }
     }
     Ok(())
+}
+
+pub mod peer_online {
+    use hbb_common::{
+        anyhow::bail,
+        config::{Config, CONNECT_TIMEOUT, READ_TIMEOUT},
+        log,
+        rendezvous_proto::*,
+        sleep,
+        socket_client::connect_tcp,
+        tcp::FramedStream,
+        ResultType,
+    };
+    use std::time::Instant;
+
+    pub async fn query_online_states<F: FnOnce(Vec<String>, Vec<String>)>(ids: Vec<String>, f: F) {
+        let test = false;
+        if test {
+            sleep(1.5).await;
+            let mut onlines = ids;
+            let offlines = onlines.drain((onlines.len() / 2)..).collect();
+            f(onlines, offlines)
+        } else {
+            let query_begin = Instant::now();
+            let query_timeout = std::time::Duration::from_millis(3_000);
+            loop {
+                match query_online_states_(&ids, query_timeout).await {
+                    Ok((onlines, offlines)) => {
+                        f(onlines, offlines);
+                        break;
+                    }
+                    Err(e) => {
+                        log::debug!("{}", &e);
+                    }
+                }
+
+                if query_begin.elapsed() > query_timeout {
+                    log::debug!(
+                        "query onlines timeout {:?} ({:?})",
+                        query_begin.elapsed(),
+                        query_timeout
+                    );
+                    break;
+                }
+
+                sleep(1.5).await;
+            }
+        }
+    }
+
+    async fn create_online_stream() -> ResultType<FramedStream> {
+        let (rendezvous_server, _servers, _contained) =
+            crate::get_rendezvous_server(READ_TIMEOUT).await;
+        let tmp: Vec<&str> = rendezvous_server.split(":").collect();
+        if tmp.len() != 2 {
+            bail!("Invalid server address: {}", rendezvous_server);
+        }
+        let port: u16 = tmp[1].parse()?;
+        if port == 0 {
+            bail!("Invalid server address: {}", rendezvous_server);
+        }
+        let online_server = format!("{}:{}", tmp[0], port - 1);
+        connect_tcp(online_server, CONNECT_TIMEOUT).await
+    }
+
+    async fn query_online_states_(
+        ids: &Vec<String>,
+        timeout: std::time::Duration,
+    ) -> ResultType<(Vec<String>, Vec<String>)> {
+        let query_begin = Instant::now();
+
+        let mut msg_out = RendezvousMessage::new();
+        msg_out.set_online_request(OnlineRequest {
+            id: Config::get_id(),
+            peers: ids.clone(),
+            ..Default::default()
+        });
+
+        loop {
+            let mut socket = match create_online_stream().await {
+                Ok(s) => s,
+                Err(e) => {
+                    log::debug!("Failed to create peers online stream, {e}");
+                    return Ok((vec![], ids.clone()));
+                }
+            };
+            // TODO: Use long connections to avoid socket creation
+            // If we use a Arc<Mutex<Option<FramedStream>>> to hold and reuse the previous socket,
+            // we may face the following error:
+            // An established connection was aborted by the software in your host machine. (os error 10053)
+            if let Err(e) = socket.send(&msg_out).await {
+                log::debug!("Failed to send peers online states query, {e}");
+                return Ok((vec![], ids.clone()));
+            }
+            if let Some(msg_in) =
+                crate::common::get_next_nonkeyexchange_msg(&mut socket, None).await
+            {
+                match msg_in.union {
+                    Some(rendezvous_message::Union::OnlineResponse(online_response)) => {
+                        let states = online_response.states;
+                        let mut onlines = Vec::new();
+                        let mut offlines = Vec::new();
+                        for i in 0..ids.len() {
+                            // bytes index from left to right
+                            let bit_value = 0x01 << (7 - i % 8);
+                            if (states[i / 8] & bit_value) == bit_value {
+                                onlines.push(ids[i].clone());
+                            } else {
+                                offlines.push(ids[i].clone());
+                            }
+                        }
+                        return Ok((onlines, offlines));
+                    }
+                    _ => {
+                        // ignore
+                    }
+                }
+            } else {
+                // TODO: Make sure socket closed?
+                bail!("Online stream receives None");
+            }
+
+            if query_begin.elapsed() > timeout {
+                bail!("Try query onlines timeout {:?}", &timeout);
+            }
+
+            sleep(300.0).await;
+        }
+    }
+
+    #[cfg(test)]
+    mod tests {
+        use hbb_common::tokio;
+
+        #[tokio::test]
+        async fn test_query_onlines() {
+            super::query_online_states(
+                vec![
+                    "152183996".to_owned(),
+                    "165782066".to_owned(),
+                    "155323351".to_owned(),
+                    "460952777".to_owned(),
+                ],
+                |onlines: Vec<String>, offlines: Vec<String>| {
+                    println!("onlines: {:?}, offlines: {:?}", &onlines, &offlines);
+                },
+            )
+            .await;
+        }
+    }
 }
