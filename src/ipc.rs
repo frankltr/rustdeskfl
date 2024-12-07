@@ -45,6 +45,10 @@ pub static EXIT_RECV_CLOSE: AtomicBool = AtomicBool::new(true);
 #[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(tag = "t", content = "c")]
 pub enum FS {
+    ReadEmptyDirs {
+        dir: String,
+        include_hidden: bool,
+    },
     ReadDir {
         dir: String,
         include_hidden: bool,
@@ -213,8 +217,6 @@ pub enum Data {
     MouseMoveTime(i64),
     Authorize,
     Close,
-    #[cfg(target_os = "android")]
-    InputControl(bool),
     #[cfg(windows)]
     SAS,
     UserSid(Option<u32>),
