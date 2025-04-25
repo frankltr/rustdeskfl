@@ -430,7 +430,7 @@ class _DesktopHomePageState extends State<DesktopHomePage>
 
   Widget buildHelpCards(String updateUrl) {
     if (!bind.isCustomClient() &&
-        updateUrl.isNotEmpty &&
+        false && //updateUrl.isNotEmpty &&
         !isCardClosed &&
         bind.mainUriPrefixSync().contains('rustdesk')) {
       return buildInstallCard(
