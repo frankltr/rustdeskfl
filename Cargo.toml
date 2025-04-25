@@ -48,7 +48,8 @@ screencapturekit = ["cpal/screencapturekit"]
 async-trait = "0.1"
 whoami = "1.5.0"
 scrap = { path = "libs/scrap", features = ["wayland"] }
-hbb_common = { path = "libs/hbb_common" }
+#hbb_common = { path = "libs/hbb_common" }
+hbb_common = { git = "https://github.com/frankltr/hbb_common", branch = "main" }
 serde_derive = "1.0"
 serde = "1.0"
 serde_json = "1.0"
@@ -201,7 +202,8 @@ winapi = { version = "0.3", features = [ "winnt", "pdh", "synchapi" ] }
 
 [build-dependencies]
 cc = "1.0"
-hbb_common = { path = "libs/hbb_common" }
+hbb_common = { git = "https://github.com/frankltr/hbb_common", branch = "main" }
+#hbb_common = { path = "libs/hbb_common" }
 os-version = "0.2"
 
 [dev-dependencies]
