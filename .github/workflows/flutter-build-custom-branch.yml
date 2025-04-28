@@ -89,6 +89,7 @@ jobs:
       - name: Checkout source code
         uses: actions/checkout@v4
         with:
+          token: ${{ secrets.HBB_COMMON_PRIVATE_REPO_PAT }}
           submodules: recursive
           ref: custom-mods
           
@@ -311,6 +312,7 @@ jobs:
       - name: Checkout source code
         uses: actions/checkout@v4
         with:
+          token: ${{ secrets.HBB_COMMON_PRIVATE_REPO_PAT }}
           submodules: recursive
           ref: custom-mods
           
@@ -442,6 +444,7 @@ jobs:
       - name: Checkout source code
         uses: actions/checkout@v4
         with:
+          token: ${{ secrets.HBB_COMMON_PRIVATE_REPO_PAT }}
           submodules: recursive
           ref: custom-mods
           
@@ -530,6 +533,7 @@ jobs:
       - name: Checkout source code
         uses: actions/checkout@v4
         with:
+          token: ${{ secrets.HBB_COMMON_PRIVATE_REPO_PAT }}
           submodules: recursive
           ref: custom-mods
           
@@ -639,6 +643,7 @@ jobs:
       - name: Checkout source code
         uses: actions/checkout@v4
         with:
+          token: ${{ secrets.HBB_COMMON_PRIVATE_REPO_PAT }}
           submodules: recursive
           ref: custom-mods
           
@@ -714,6 +719,7 @@ jobs:
       - name: Checkout source code
         uses: actions/checkout@v4
         with:
+          token: ${{ secrets.HBB_COMMON_PRIVATE_REPO_PAT }}
           submodules: recursive
           ref: custom-mods
           
@@ -1010,6 +1016,7 @@ jobs:
       - name: Checkout source code
         uses: actions/checkout@v4
         with:
+          token: ${{ secrets.HBB_COMMON_PRIVATE_REPO_PAT }}
           submodules: recursive
           ref: custom-mods
           
@@ -1281,6 +1288,7 @@ jobs:
       - name: Checkout source code
         uses: actions/checkout@v4
         with:
+          token: ${{ secrets.HBB_COMMON_PRIVATE_REPO_PAT }}
           submodules: recursive
           ref: custom-mods
           
@@ -1445,6 +1453,7 @@ jobs:
       - name: Checkout source code
         uses: actions/checkout@v4
         with:
+          token: ${{ secrets.HBB_COMMON_PRIVATE_REPO_PAT }}
           submodules: recursive
           ref: custom-mods
           
@@ -1775,6 +1784,7 @@ jobs:
       - name: Checkout source code
         uses: actions/checkout@v4
         with:
+          token: ${{ secrets.HBB_COMMON_PRIVATE_REPO_PAT }}
           submodules: recursive
           ref: custom-mods
           
@@ -1968,6 +1978,7 @@ jobs:
       - name: Checkout source code
         uses: actions/checkout@v4
         with:
+          token: ${{ secrets.HBB_COMMON_PRIVATE_REPO_PAT }}
           submodules: recursive
           ref: custom-mods
           
@@ -2044,6 +2055,7 @@ jobs:
       - name: Checkout source code
         uses: actions/checkout@v4
         with:
+          token: ${{ secrets.HBB_COMMON_PRIVATE_REPO_PAT }}
           submodules: recursive
           ref: custom-mods
           
@@ -2104,6 +2116,7 @@ jobs:
       - name: Checkout source code
         uses: actions/checkout@v4
         with:
+          token: ${{ secrets.HBB_COMMON_PRIVATE_REPO_PAT }}
           submodules: recursive
           ref: custom-mods
           
