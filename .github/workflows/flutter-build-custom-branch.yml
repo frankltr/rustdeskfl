@@ -78,6 +78,10 @@ jobs:
               vcpkg-triplet: x64-windows-static,
             }
           # - { target: aarch64-pc-windows-msvc, os: windows-2022, arch: aarch64 }
+    env:
+      # Espose PAT as env variable GITHUB_TOKEN for Git/Cargo auth
+      GITHUB_TOKEN: ${{ secrets.HBB_COMMON_PRIVATE_REPO_PAT }}
+      
     steps:
       - name: Export GitHub Actions cache environment variables
         uses: actions/github-script@v6
@@ -301,6 +305,10 @@ jobs:
               vcpkg-triplet: x86-windows-static,
             }
           # - { target: aarch64-pc-windows-msvc, os: windows-2022 }
+    env:
+      # Espose PAT as env variable GITHUB_TOKEN for Git/Cargo auth
+      GITHUB_TOKEN: ${{ secrets.HBB_COMMON_PRIVATE_REPO_PAT }}
+      
     steps:
       - name: Export GitHub Actions cache environment variables
         uses: actions/github-script@v6
@@ -433,6 +441,11 @@ jobs:
     if: false
     runs-on: [self-hosted, macOS, ARM64]
     needs: [generate-bridge]
+
+    env:
+      # Espose PAT as env variable GITHUB_TOKEN for Git/Cargo auth
+      GITHUB_TOKEN: ${{ secrets.HBB_COMMON_PRIVATE_REPO_PAT }}
+      
     steps:
       - name: Export GitHub Actions cache environment variables
         uses: actions/github-script@v6
@@ -519,6 +532,11 @@ jobs:
               os: macos-13,
               vcpkg-triplet: arm64-ios,
             }
+
+    env:
+      # Espose PAT as env variable GITHUB_TOKEN for Git/Cargo auth
+      GITHUB_TOKEN: ${{ secrets.HBB_COMMON_PRIVATE_REPO_PAT }}
+    
     steps:
       - name: Export GitHub Actions cache environment variables
         uses: actions/github-script@v6
@@ -632,6 +650,11 @@ jobs:
     needs: [generate-bridge]
     strategy:
       fail-fast: false
+
+    env:
+      # Espose PAT as env variable GITHUB_TOKEN for Git/Cargo auth
+      GITHUB_TOKEN: ${{ secrets.HBB_COMMON_PRIVATE_REPO_PAT }}
+      
     steps:
       - name: Export GitHub Actions cache environment variables
         uses: actions/github-script@v6
@@ -708,6 +731,11 @@ jobs:
               arch: aarch64,
               vcpkg-triplet: arm64-osx,
             }
+
+    env:
+      # Espose PAT as env variable GITHUB_TOKEN for Git/Cargo auth
+      GITHUB_TOKEN: ${{ secrets.HBB_COMMON_PRIVATE_REPO_PAT }}
+      
     steps:
       - name: Export GitHub Actions cache environment variables
         uses: actions/github-script@v6
@@ -959,6 +987,11 @@ jobs:
               reltype: release,
               suffix: "",
             }
+
+    env:
+      # Espose PAT as env variable GITHUB_TOKEN for Git/Cargo auth
+      GITHUB_TOKEN: ${{ secrets.HBB_COMMON_PRIVATE_REPO_PAT }}
+      
     steps:
       - name: Free Disk Space (Ubuntu)
         uses: jlumbroso/free-disk-space@main
@@ -1231,6 +1264,8 @@ jobs:
       reltype: release
       x86_target: "" # can be ",android-x86"
       suffix: ""
+      GITHUB_TOKEN: ${{ secrets.HBB_COMMON_PRIVATE_REPO_PAT }}
+      
     steps:
       - name: Free Disk Space (Ubuntu)
         uses: jlumbroso/free-disk-space@main
@@ -1431,6 +1466,11 @@ jobs:
               deb_arch: arm64,
               vcpkg-triplet: arm64-linux,
             }
+
+    env:
+      # Espose PAT as env variable GITHUB_TOKEN for Git/Cargo auth
+      GITHUB_TOKEN: ${{ secrets.HBB_COMMON_PRIVATE_REPO_PAT }}
+      
     steps:
       - name: Export GitHub Actions cache environment variables
         uses: actions/github-script@v6
@@ -1773,6 +1813,11 @@ jobs:
               vcpkg-triplet: arm-linux,
               extra_features: ",unix-file-copy-paste",
             }
+
+    env:
+      # Espose PAT as env variable GITHUB_TOKEN for Git/Cargo auth
+      GITHUB_TOKEN: ${{ secrets.HBB_COMMON_PRIVATE_REPO_PAT }}
+      
     steps:
       - name: Export GitHub Actions cache environment variables
         uses: actions/github-script@v6
@@ -1974,6 +2019,11 @@ jobs:
         job:
           - { target: x86_64-unknown-linux-gnu, arch: x86_64 }
           - { target: aarch64-unknown-linux-gnu, arch: aarch64 }
+
+    env:
+      # Espose PAT as env variable GITHUB_TOKEN for Git/Cargo auth
+      GITHUB_TOKEN: ${{ secrets.HBB_COMMON_PRIVATE_REPO_PAT }}
+      
     steps:
       - name: Checkout source code
         uses: actions/checkout@v4
@@ -2051,6 +2101,11 @@ jobs:
               arch: aarch64,
               suffix: "",
             }
+
+    env:
+      # Espose PAT as env variable GITHUB_TOKEN for Git/Cargo auth
+      GITHUB_TOKEN: ${{ secrets.HBB_COMMON_PRIVATE_REPO_PAT }}
+      
     steps:
       - name: Checkout source code
         uses: actions/checkout@v4
@@ -2112,6 +2167,8 @@ jobs:
       fail-fast: false
     env:
       RELEASE_NAME: web-basic
+      GITHUB_TOKEN: ${{ secrets.HBB_COMMON_PRIVATE_REPO_PAT }}
+      
     steps:
       - name: Checkout source code
         uses: actions/checkout@v4
