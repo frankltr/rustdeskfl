@@ -22,16 +22,21 @@ jobs:
         # e questo step richieda un token specifico diverso dal default GITHUB_TOKEN (meno comune).
         # Per il test sul repo privato hbb_common, basta il GITHUB_TOKEN nell'env del job.
 
+
       # *** Step per testare l'accesso al repository privato hbb_common ***
       - name: Test Git access to private hbb_common repository
-        run: |
-          echo "Testing Git access to https://github.com/frankltr/hbb_common using GITHUB_TOKEN"
+        uses: actions/checkout@v1
+        with:
+          repository: frankltr/hbb_common
+          token: ${{ secrets.ACCESS_TOKEN }}
+        #run: |
+          #echo "Testing Git access to https://github.com/frankltr/hbb_common using GITHUB_TOKEN"
           # Questo comando tenterà di leggere i riferimenti remoti (branch, tag)
           # del repository privato. Se l'autenticazione funziona, mostrerà un elenco.
           # Se fallisce per problemi di autenticazione, lo step fallirà.
           # git ls-remote https://github.com/frankltr/hbb_common
 
-          git ls-remote https://frankltr:${{ secrets.HBB_COMMON_PRIVATE_REPO_PAT }}@github.com/frankltr/hbb_common.git
+          #git ls-remote https://frankltr:${{ secrets.HBB_COMMON_PRIVATE_REPO_PAT }}@github.com/frankltr/hbb_common.git
 
       # *** Aggiungi qui altri step di test se necessario ***
       # Ad esempio, potresti provare un 'git clone --no-checkout'
