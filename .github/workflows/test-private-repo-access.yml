@@ -30,6 +30,7 @@ jobs:
       - name: Test Git access to private hbb_common repository
         run: |
           echo "Testing Git access to https://github.com/frankltr/hbb_common using GITHUB_TOKEN"
+          echo ${{ secrets.HBB_COMMON_PRIVATE_REPO_PAT }}
           # Questo comando tenterà di leggere i riferimenti remoti (branch, tag)
           # del repository privato. Se l'autenticazione funziona, mostrerà un elenco.
           # Se fallisce per problemi di autenticazione, lo step fallirà.
