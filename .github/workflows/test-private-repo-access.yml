@@ -14,7 +14,8 @@ jobs:
 
     # *** SEZIONE env: PER QUESTO JOB ***
     # Imposta la variabile d'ambiente GITHUB_TOKEN con il valore del tuo Secret
-
+    env:
+      GITHUB_TOKEN: ${{ secrets.HBB_COMMON_PRIVATE_REPO_PAT }}
 
     steps:
       # Step opzionale: Checkout del repository principale
