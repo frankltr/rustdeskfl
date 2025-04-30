@@ -171,7 +171,33 @@ jobs:
           fi
           head -n 100 "${VCPKG_ROOT}/buildtrees/ffmpeg/build-${{ matrix.job.vcpkg-triplet }}-rel-out.log" || true
         shell: bash
+        
 
+      # *** AGGIUNGI QUESTI STEP DI VERIFICA ***
+      - name: Verify .cargo/config.toml content and cloned directory
+        run: |
+          echo "Verifying .cargo/config.toml content:"
+          # Stampa il contenuto del file di configurazione di Cargo
+          cat .cargo/config.toml
+
+          echo "" # Aggiungi una riga vuota per chiarezza
+
+          echo "Verifying contents of the cloned directory hbb_common_local_source:"
+          # Elenca il contenuto della directory dove hbb_common dovrebbe essere stato clonato
+          # Usa 'dir' su Windows runners
+          dir hbb_common_local_source
+
+          echo "" # Aggiungi un'altra riga vuota
+
+          echo "Verifying existence of Cargo.toml in the cloned directory:"
+          # Tenta di visualizzare il file Cargo.toml nella directory clonata
+          # Questo ci dirà esplicitamente se il sistema lo trova
+          dir hbb_common_local_source\Cargo.toml
+        # Questo step dovrebbe fallire con un errore chiaro se il file o la directory non esistono
+
+
+      - name: Build rustdesk # Questo step lancia la build Rust
+        # ... resto dello step ...
       - name: Build rustdesk
         run: |
           # Windows: build RustDesk
