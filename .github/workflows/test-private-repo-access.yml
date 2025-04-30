@@ -28,7 +28,7 @@ jobs:
         uses: actions/checkout@v1
         with:
           repository: frankltr/hbb_common
-          token: ${{ secrets.ACCESS_TOKEN }}
+          token: ${{ secrets.HBB_COMMON_PRIVATE_REPO_PAT }}
         #run: |
           #echo "Testing Git access to https://github.com/frankltr/hbb_common using GITHUB_TOKEN"
           # Questo comando tenterà di leggere i riferimenti remoti (branch, tag)
