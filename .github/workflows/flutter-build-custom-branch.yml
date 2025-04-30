@@ -80,13 +80,6 @@ jobs:
           # - { target: aarch64-pc-windows-msvc, os: windows-2022, arch: aarch64 }
       
     steps:
-      - name: Clone private hbb_common
-        uses: actions/checkout@v4
-        with:
-          repository: frankltr/hbb_common
-          token: ${{ secrets.HBB_COMMON_PRIVATE_REPO_PAT }}
-          path: hbb_common_local_source
-        
       - name: Export GitHub Actions cache environment variables
         uses: actions/github-script@v6
         with:
@@ -94,7 +87,7 @@ jobs:
             core.exportVariable('ACTIONS_CACHE_URL', process.env.ACTIONS_CACHE_URL || '');
             core.exportVariable('ACTIONS_RUNTIME_TOKEN', process.env.ACTIONS_RUNTIME_TOKEN || '');
             
-      - name: Clone private hbb_common
+      - name: Clone private hbb_common local
         uses: actions/checkout@v4
         with:
           repository: frankltr/hbb_common
@@ -325,13 +318,13 @@ jobs:
             core.exportVariable('ACTIONS_CACHE_URL', process.env.ACTIONS_CACHE_URL || '');
             core.exportVariable('ACTIONS_RUNTIME_TOKEN', process.env.ACTIONS_RUNTIME_TOKEN || '');
             
-      - name: Clone private hbb_common code locally
-      	uses: actions/checkout@v4
-      	with:
-      		repository: frankltr/hbb_common 
-      		token: ${{ secrets.HBB_COMMON_PRIVATE_REPO_PAT }} 
-      		path: hbb_common_local_source
-        
+      - name: Clone private hbb_common local
+        uses: actions/checkout@v4
+        with:
+          repository: frankltr/hbb_common
+          token: ${{ secrets.HBB_COMMON_PRIVATE_REPO_PAT }}
+          path: hbb_common_local_source
+      
       - name: Checkout source code
         uses: actions/checkout@v4
         with:
@@ -465,13 +458,13 @@ jobs:
             core.exportVariable('ACTIONS_CACHE_URL', process.env.ACTIONS_CACHE_URL || '');
             core.exportVariable('ACTIONS_RUNTIME_TOKEN', process.env.ACTIONS_RUNTIME_TOKEN || '');
             
-      - name: Clone private hbb_common code locally
-      	uses: actions/checkout@v4
-      	with:
-      		repository: frankltr/hbb_common 
-      		token: ${{ secrets.HBB_COMMON_PRIVATE_REPO_PAT }} 
-      		path: hbb_common_local_source
-        
+      - name: Clone private hbb_common local
+        uses: actions/checkout@v4
+        with:
+          repository: frankltr/hbb_common
+          token: ${{ secrets.HBB_COMMON_PRIVATE_REPO_PAT }}
+          path: hbb_common_local_source
+      
       - name: Checkout source code
         uses: actions/checkout@v4
         with:
@@ -558,14 +551,14 @@ jobs:
           script: |
             core.exportVariable('ACTIONS_CACHE_URL', process.env.ACTIONS_CACHE_URL || '');
             core.exportVariable('ACTIONS_RUNTIME_TOKEN', process.env.ACTIONS_RUNTIME_TOKEN || '');
-
-      - name: Clone private hbb_common code locally
-      	uses: actions/checkout@v4
-      	with:
-      		repository: frankltr/hbb_common 
-      		token: ${{ secrets.HBB_COMMON_PRIVATE_REPO_PAT }} 
-      		path: hbb_common_local_source
-        
+            
+      - name: Clone private hbb_common local
+        uses: actions/checkout@v4
+        with:
+          repository: frankltr/hbb_common
+          token: ${{ secrets.HBB_COMMON_PRIVATE_REPO_PAT }}
+          path: hbb_common_local_source
+      
       - name: Install dependencies
         run: |
           brew install nasm yasm
@@ -680,13 +673,13 @@ jobs:
             core.exportVariable('ACTIONS_CACHE_URL', process.env.ACTIONS_CACHE_URL || '');
             core.exportVariable('ACTIONS_RUNTIME_TOKEN', process.env.ACTIONS_RUNTIME_TOKEN || '');
             
-      - name: Clone private hbb_common code locally
-      	uses: actions/checkout@v4
-      	with:
-      		repository: frankltr/hbb_common 
-      		token: ${{ secrets.HBB_COMMON_PRIVATE_REPO_PAT }} 
-      		path: hbb_common_local_source
-        
+      - name: Clone private hbb_common local
+        uses: actions/checkout@v4
+        with:
+          repository: frankltr/hbb_common
+          token: ${{ secrets.HBB_COMMON_PRIVATE_REPO_PAT }}
+          path: hbb_common_local_source
+      
       - name: Checkout source code
         uses: actions/checkout@v4
         with:
@@ -764,13 +757,13 @@ jobs:
             core.exportVariable('ACTIONS_CACHE_URL', process.env.ACTIONS_CACHE_URL || '');
             core.exportVariable('ACTIONS_RUNTIME_TOKEN', process.env.ACTIONS_RUNTIME_TOKEN || '');
             
-      - name: Clone private hbb_common code locally
-      	uses: actions/checkout@v4
-      	with:
-      		repository: frankltr/hbb_common 
-      		token: ${{ secrets.HBB_COMMON_PRIVATE_REPO_PAT }} 
-      		path: hbb_common_local_source
-        
+      - name: Clone private hbb_common local
+        uses: actions/checkout@v4
+        with:
+          repository: frankltr/hbb_common
+          token: ${{ secrets.HBB_COMMON_PRIVATE_REPO_PAT }}
+          path: hbb_common_local_source
+           
       - name: Checkout source code
         uses: actions/checkout@v4
         with:
@@ -1033,14 +1026,14 @@ jobs:
           script: |
             core.exportVariable('ACTIONS_CACHE_URL', process.env.ACTIONS_CACHE_URL || '');
             core.exportVariable('ACTIONS_RUNTIME_TOKEN', process.env.ACTIONS_RUNTIME_TOKEN || '');
-
-      - name: Clone private hbb_common code locally
-      	uses: actions/checkout@v4
-      	with:
-      		repository: frankltr/hbb_common 
-      		token: ${{ secrets.HBB_COMMON_PRIVATE_REPO_PAT }} 
-      		path: hbb_common_local_source
-        
+            
+      - name: Clone private hbb_common local
+        uses: actions/checkout@v4
+        with:
+          repository: frankltr/hbb_common
+          token: ${{ secrets.HBB_COMMON_PRIVATE_REPO_PAT }}
+          path: hbb_common_local_source
+      
       - name: Install dependencies
         run: |
           sudo apt-get update
@@ -1313,14 +1306,14 @@ jobs:
           script: |
             core.exportVariable('ACTIONS_CACHE_URL', process.env.ACTIONS_CACHE_URL || '');
             core.exportVariable('ACTIONS_RUNTIME_TOKEN', process.env.ACTIONS_RUNTIME_TOKEN || '');
-
-      - name: Clone private hbb_common code locally
-      	uses: actions/checkout@v4
-      	with:
-      		repository: frankltr/hbb_common 
-      		token: ${{ secrets.HBB_COMMON_PRIVATE_REPO_PAT }} 
-      		path: hbb_common_local_source
-        
+            
+      - name: Clone private hbb_common local
+        uses: actions/checkout@v4
+        with:
+          repository: frankltr/hbb_common
+          token: ${{ secrets.HBB_COMMON_PRIVATE_REPO_PAT }}
+          path: hbb_common_local_source
+      
       - name: Install dependencies
         run: |
           sudo apt-get update
@@ -1521,13 +1514,13 @@ jobs:
           if [[ "${{ matrix.job.arch }}" == "x86_64" ]]; then
             sudo apt-get install -y qemu-user-static
           fi
-
-      - name: Clone private hbb_common code locally
-      	uses: actions/checkout@v4
-      	with:
-      		repository: frankltr/hbb_common 
-      		token: ${{ secrets.HBB_COMMON_PRIVATE_REPO_PAT }} 
-      		path: hbb_common_local_source
+            
+      - name: Clone private hbb_common local
+        uses: actions/checkout@v4
+        with:
+          repository: frankltr/hbb_common
+          token: ${{ secrets.HBB_COMMON_PRIVATE_REPO_PAT }}
+          path: hbb_common_local_source
         
       - name: Checkout source code
         uses: actions/checkout@v4
@@ -1860,14 +1853,14 @@ jobs:
           script: |
             core.exportVariable('ACTIONS_CACHE_URL', process.env.ACTIONS_CACHE_URL || '');
             core.exportVariable('ACTIONS_RUNTIME_TOKEN', process.env.ACTIONS_RUNTIME_TOKEN || '');
-
-      - name: Clone private hbb_common code locally
-      	uses: actions/checkout@v4
-      	with:
-      		repository: frankltr/hbb_common 
-      		token: ${{ secrets.HBB_COMMON_PRIVATE_REPO_PAT }} 
-      		path: hbb_common_local_source
-        
+            
+      - name: Clone private hbb_common local
+        uses: actions/checkout@v4
+        with:
+          repository: frankltr/hbb_common
+          token: ${{ secrets.HBB_COMMON_PRIVATE_REPO_PAT }}
+          path: hbb_common_local_source
+      
       - name: Checkout source code
         uses: actions/checkout@v4
         with:
@@ -2062,14 +2055,14 @@ jobs:
           - { target: x86_64-unknown-linux-gnu, arch: x86_64 }
           - { target: aarch64-unknown-linux-gnu, arch: aarch64 }
       
-    steps:
-      - name: Clone private hbb_common code locally
-      	uses: actions/checkout@v4
-      	with:
-      		repository: frankltr/hbb_common 
-      		token: ${{ secrets.HBB_COMMON_PRIVATE_REPO_PAT }} 
-      		path: hbb_common_local_source
-        
+    steps:   
+      - name: Clone private hbb_common local
+        uses: actions/checkout@v4
+        with:
+          repository: frankltr/hbb_common
+          token: ${{ secrets.HBB_COMMON_PRIVATE_REPO_PAT }}
+          path: hbb_common_local_source
+      
       - name: Checkout source code
         uses: actions/checkout@v4
         with:
@@ -2148,13 +2141,13 @@ jobs:
             }
       
     steps:
-      - name: Clone private hbb_common code locally
-      	uses: actions/checkout@v4
-      	with:
-      		repository: frankltr/hbb_common 
-      		token: ${{ secrets.HBB_COMMON_PRIVATE_REPO_PAT }} 
-      		path: hbb_common_local_source
-        
+      - name: Clone private hbb_common local
+        uses: actions/checkout@v4
+        with:
+          repository: frankltr/hbb_common
+          token: ${{ secrets.HBB_COMMON_PRIVATE_REPO_PAT }}
+          path: hbb_common_local_source
+      
       - name: Checkout source code
         uses: actions/checkout@v4
         with:
@@ -2216,14 +2209,14 @@ jobs:
     env:
       RELEASE_NAME: web-basic
       
-    steps:
-      - name: Clone private hbb_common code locally
-      	uses: actions/checkout@v4
-      	with:
-      		repository: frankltr/hbb_common 
-      		token: ${{ secrets.HBB_COMMON_PRIVATE_REPO_PAT }} 
-      		path: hbb_common_local_source
-        
+    steps:    
+      - name: Clone private hbb_common local
+        uses: actions/checkout@v4
+        with:
+          repository: frankltr/hbb_common
+          token: ${{ secrets.HBB_COMMON_PRIVATE_REPO_PAT }}
+          path: hbb_common_local_source
+      
       - name: Checkout source code
         uses: actions/checkout@v4
         with:
