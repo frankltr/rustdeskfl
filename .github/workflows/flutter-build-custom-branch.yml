@@ -171,8 +171,8 @@ jobs:
           fi
           head -n 100 "${VCPKG_ROOT}/buildtrees/ffmpeg/build-${{ matrix.job.vcpkg-triplet }}-rel-out.log" || true
         shell: bash
-        
 
+        
       - name: Verify cargo config.toml
         run: |
           echo "Verifying cargo config.toml content:"
@@ -183,9 +183,8 @@ jobs:
           echo ""
           echo "Verifying existence of cargo.toml in cloned directory:"
           dir hbb_common_local_source\Cargo.toml
-          
-      - name: Build rustdesk # Questo step lancia la build Rust
-        # ... resto dello step ...
+
+
       - name: Build rustdesk
         run: |
           # Windows: build RustDesk
