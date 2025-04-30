@@ -1,0 +1,44 @@
+name: Test Private Repository Access
+
+# Questo workflow può essere eseguito manualmente dalla pagina "Actions" su GitHub
+on:
+  workflow_dispatch:
+
+env:
+  GITHUB_TOKEN: ${{ secrets.HBB_COMMON_PRIVATE_REPO_PAT }}
+
+jobs:
+  test-access:
+    name: Verify Private Repository Access
+    runs-on: ubuntu-latest # Puoi usare il runner che preferisci, ubuntu-latest è comune
+
+    # *** SEZIONE env: PER QUESTO JOB ***
+    # Imposta la variabile d'ambiente GITHUB_TOKEN con il valore del tuo Secret
+
+
+    steps:
+      # Step opzionale: Checkout del repository principale
+      # Non è strettamente necessario per il test su un *altro* repository,
+      # ma assicura che gli strumenti Git siano disponibili.
+      - name: Checkout main repository
+        uses: actions/checkout@v4
+        # Non hai bisogno di un token qui a meno che il repository 'rustdesk' sia privato
+        # e questo step richieda un token specifico diverso dal default GITHUB_TOKEN (meno comune).
+        # Per il test sul repo privato hbb_common, basta il GITHUB_TOKEN nell'env del job.
+
+      # *** Step per testare l'accesso al repository privato hbb_common ***
+      - name: Test Git access to private hbb_common repository
+        run: |
+          echo "Testing Git access to https://github.com/frankltr/hbb_common using GITHUB_TOKEN"
+          # Questo comando tenterà di leggere i riferimenti remoti (branch, tag)
+          # del repository privato. Se l'autenticazione funziona, mostrerà un elenco.
+          # Se fallisce per problemi di autenticazione, lo step fallirà.
+          git ls-remote https://github.com/frankltr/hbb_common
+
+      # *** Aggiungi qui altri step di test se necessario ***
+      # Ad esempio, potresti provare un 'git clone --no-checkout'
+      # - name: Optional: Test cloning private repository
+      #   run: |
+      #     git clone --no-checkout https://github.com/frankltr/hbb_common ./hbb_common_test_clone
+      #     echo "Clone test completed."
+      #   working-directory: ${{ runner.temp }} # Clona in una directory temporanea
