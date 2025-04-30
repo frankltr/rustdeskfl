@@ -87,7 +87,7 @@ jobs:
             core.exportVariable('ACTIONS_CACHE_URL', process.env.ACTIONS_CACHE_URL || '');
             core.exportVariable('ACTIONS_RUNTIME_TOKEN', process.env.ACTIONS_RUNTIME_TOKEN || '');
            
-      - name: Clone private hbb-common code locally
+      - name: Clone private hbb_common
       	uses: actions/checkout@v4
       	with:
       		repository: frankltr/hbb_common 
