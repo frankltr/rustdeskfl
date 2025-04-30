@@ -95,12 +95,12 @@ jobs:
             core.exportVariable('ACTIONS_RUNTIME_TOKEN', process.env.ACTIONS_RUNTIME_TOKEN || '');
             
       - name: Clone private hbb_common
-      	uses: actions/checkout@v4
-      	with:
-      		repository: frankltr/hbb_common 
-      		token: ${{ secrets.HBB_COMMON_PRIVATE_REPO_PAT }} 
-      		path: hbb_common_local_source
-  
+        uses: actions/checkout@v4
+        with:
+          repository: frankltr/hbb_common
+          token: ${{ secrets.HBB_COMMON_PRIVATE_REPO_PAT }}
+          path: hbb_common_local_source
+          
       - name: Checkout source code
         uses: actions/checkout@v4
         with:
