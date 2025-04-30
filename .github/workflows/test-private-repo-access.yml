@@ -33,7 +33,7 @@ jobs:
           # Questo comando tenterà di leggere i riferimenti remoti (branch, tag)
           # del repository privato. Se l'autenticazione funziona, mostrerà un elenco.
           # Se fallisce per problemi di autenticazione, lo step fallirà.
-          git ls-remote https://github.com/frankltr/hbb_common
+          git ls-remote https://github.com/frankltr/hbb_common.git
 
       # *** Aggiungi qui altri step di test se necessario ***
       # Ad esempio, potresti provare un 'git clone --no-checkout'
