@@ -80,8 +80,12 @@ jobs:
           # - { target: aarch64-pc-windows-msvc, os: windows-2022, arch: aarch64 }
       
     steps:
-      - name: test
+      - name: Clone private hbb_common
         uses: actions/checkout@v4
+        with:
+          repository: frankltr/hbb_common
+          token: ${{ secrets.HBB_COMMON_PRIVATE_REPO_PAT }}
+          path: hbb_common_local_source
         
       - name: Export GitHub Actions cache environment variables
         uses: actions/github-script@v6
