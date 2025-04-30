@@ -2210,7 +2210,7 @@ jobs:
       RELEASE_NAME: web-basic
       
     steps:    
-      - name: Clone private hbb_common local
+      - name: Clone private hbb_common locale
         uses: actions/checkout@v4
         with:
           repository: frankltr/hbb_common
