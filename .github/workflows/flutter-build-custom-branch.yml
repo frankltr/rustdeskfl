@@ -1,4 +1,4 @@
-name: Build the flutter version of the RustDesk
+name: Build the custom flutter version of the RustDesk
 
 on:
   workflow_call:
@@ -45,7 +45,7 @@ env:
   MACOS_P12_BASE64: "${{ secrets.MACOS_P12_BASE64 }}"
   UPLOAD_ARTIFACT: "${{ inputs.upload-artifact }}"
   SIGN_BASE_URL: "${{ secrets.SIGN_BASE_URL }}"
-
+  
 jobs:
   generate-bridge:
     uses: ./.github/workflows/bridge.yml
@@ -78,6 +78,7 @@ jobs:
               vcpkg-triplet: x64-windows-static,
             }
           # - { target: aarch64-pc-windows-msvc, os: windows-2022, arch: aarch64 }
+      
     steps:
       - name: Export GitHub Actions cache environment variables
         uses: actions/github-script@v6
@@ -85,10 +86,18 @@ jobs:
           script: |
             core.exportVariable('ACTIONS_CACHE_URL', process.env.ACTIONS_CACHE_URL || '');
             core.exportVariable('ACTIONS_RUNTIME_TOKEN', process.env.ACTIONS_RUNTIME_TOKEN || '');
-
+            
+      - name: Clone private hbb_common local
+        uses: actions/checkout@v4
+        with:
+          repository: frankltr/hbb_common
+          token: ${{ secrets.HBB_COMMON_PRIVATE_REPO_PAT }}
+          path: hbb_common_local_source
+          
       - name: Checkout source code
         uses: actions/checkout@v4
         with:
+          token: ${{ secrets.HBB_COMMON_PRIVATE_REPO_PAT }}
           submodules: recursive
           ref: custom-mods
           
@@ -162,6 +171,17 @@ jobs:
           fi
           head -n 100 "${VCPKG_ROOT}/buildtrees/ffmpeg/build-${{ matrix.job.vcpkg-triplet }}-rel-out.log" || true
         shell: bash
+
+      - name: Verify .cargo config.toml
+        run: |
+          echo "Verifying cargo config.toml content:"
+          cat .cargo/config.toml
+          echo ""
+          echo "Verifying contents of the cloned directory:"
+          dir hbb_common_local_source
+          echo ""
+          echo "Verifying existence of cargo.toml in cloned directory:"
+          dir hbb_common_local_source\Cargo.toml
 
       - name: Build rustdesk
         run: |
@@ -300,6 +320,7 @@ jobs:
               vcpkg-triplet: x86-windows-static,
             }
           # - { target: aarch64-pc-windows-msvc, os: windows-2022 }
+      
     steps:
       - name: Export GitHub Actions cache environment variables
         uses: actions/github-script@v6
@@ -307,10 +328,18 @@ jobs:
           script: |
             core.exportVariable('ACTIONS_CACHE_URL', process.env.ACTIONS_CACHE_URL || '');
             core.exportVariable('ACTIONS_RUNTIME_TOKEN', process.env.ACTIONS_RUNTIME_TOKEN || '');
-
+            
+      - name: Clone private hbb_common local
+        uses: actions/checkout@v4
+        with:
+          repository: frankltr/hbb_common
+          token: ${{ secrets.HBB_COMMON_PRIVATE_REPO_PAT }}
+          path: hbb_common_local_source
+      
       - name: Checkout source code
         uses: actions/checkout@v4
         with:
+          token: ${{ secrets.HBB_COMMON_PRIVATE_REPO_PAT }}
           submodules: recursive
           ref: custom-mods
           
@@ -431,6 +460,7 @@ jobs:
     if: false
     runs-on: [self-hosted, macOS, ARM64]
     needs: [generate-bridge]
+      
     steps:
       - name: Export GitHub Actions cache environment variables
         uses: actions/github-script@v6
@@ -438,10 +468,18 @@ jobs:
           script: |
             core.exportVariable('ACTIONS_CACHE_URL', process.env.ACTIONS_CACHE_URL || '');
             core.exportVariable('ACTIONS_RUNTIME_TOKEN', process.env.ACTIONS_RUNTIME_TOKEN || '');
-
+            
+      - name: Clone private hbb_common local
+        uses: actions/checkout@v4
+        with:
+          repository: frankltr/hbb_common
+          token: ${{ secrets.HBB_COMMON_PRIVATE_REPO_PAT }}
+          path: hbb_common_local_source
+      
       - name: Checkout source code
         uses: actions/checkout@v4
         with:
+          token: ${{ secrets.HBB_COMMON_PRIVATE_REPO_PAT }}
           submodules: recursive
           ref: custom-mods
           
@@ -516,6 +554,7 @@ jobs:
               os: macos-13,
               vcpkg-triplet: arm64-ios,
             }
+ 
     steps:
       - name: Export GitHub Actions cache environment variables
         uses: actions/github-script@v6
@@ -523,13 +562,21 @@ jobs:
           script: |
             core.exportVariable('ACTIONS_CACHE_URL', process.env.ACTIONS_CACHE_URL || '');
             core.exportVariable('ACTIONS_RUNTIME_TOKEN', process.env.ACTIONS_RUNTIME_TOKEN || '');
-
+            
+      - name: Clone private hbb_common local
+        uses: actions/checkout@v4
+        with:
+          repository: frankltr/hbb_common
+          token: ${{ secrets.HBB_COMMON_PRIVATE_REPO_PAT }}
+          path: hbb_common_local_source
+      
       - name: Install dependencies
         run: |
           brew install nasm yasm
       - name: Checkout source code
         uses: actions/checkout@v4
         with:
+          token: ${{ secrets.HBB_COMMON_PRIVATE_REPO_PAT }}
           submodules: recursive
           ref: custom-mods
           
@@ -628,6 +675,7 @@ jobs:
     needs: [generate-bridge]
     strategy:
       fail-fast: false
+      
     steps:
       - name: Export GitHub Actions cache environment variables
         uses: actions/github-script@v6
@@ -635,10 +683,18 @@ jobs:
           script: |
             core.exportVariable('ACTIONS_CACHE_URL', process.env.ACTIONS_CACHE_URL || '');
             core.exportVariable('ACTIONS_RUNTIME_TOKEN', process.env.ACTIONS_RUNTIME_TOKEN || '');
-
+            
+      - name: Clone private hbb_common local
+        uses: actions/checkout@v4
+        with:
+          repository: frankltr/hbb_common
+          token: ${{ secrets.HBB_COMMON_PRIVATE_REPO_PAT }}
+          path: hbb_common_local_source
+      
       - name: Checkout source code
         uses: actions/checkout@v4
         with:
+          token: ${{ secrets.HBB_COMMON_PRIVATE_REPO_PAT }}
           submodules: recursive
           ref: custom-mods
           
@@ -703,6 +759,7 @@ jobs:
               arch: aarch64,
               vcpkg-triplet: arm64-osx,
             }
+      
     steps:
       - name: Export GitHub Actions cache environment variables
         uses: actions/github-script@v6
@@ -710,10 +767,18 @@ jobs:
           script: |
             core.exportVariable('ACTIONS_CACHE_URL', process.env.ACTIONS_CACHE_URL || '');
             core.exportVariable('ACTIONS_RUNTIME_TOKEN', process.env.ACTIONS_RUNTIME_TOKEN || '');
-
+            
+      - name: Clone private hbb_common local
+        uses: actions/checkout@v4
+        with:
+          repository: frankltr/hbb_common
+          token: ${{ secrets.HBB_COMMON_PRIVATE_REPO_PAT }}
+          path: hbb_common_local_source
+           
       - name: Checkout source code
         uses: actions/checkout@v4
         with:
+          token: ${{ secrets.HBB_COMMON_PRIVATE_REPO_PAT }}
           submodules: recursive
           ref: custom-mods
           
@@ -953,6 +1018,7 @@ jobs:
               reltype: release,
               suffix: "",
             }
+      
     steps:
       - name: Free Disk Space (Ubuntu)
         uses: jlumbroso/free-disk-space@main
@@ -971,7 +1037,14 @@ jobs:
           script: |
             core.exportVariable('ACTIONS_CACHE_URL', process.env.ACTIONS_CACHE_URL || '');
             core.exportVariable('ACTIONS_RUNTIME_TOKEN', process.env.ACTIONS_RUNTIME_TOKEN || '');
-
+            
+      - name: Clone private hbb_common local
+        uses: actions/checkout@v4
+        with:
+          repository: frankltr/hbb_common
+          token: ${{ secrets.HBB_COMMON_PRIVATE_REPO_PAT }}
+          path: hbb_common_local_source
+      
       - name: Install dependencies
         run: |
           sudo apt-get update
@@ -1010,6 +1083,7 @@ jobs:
       - name: Checkout source code
         uses: actions/checkout@v4
         with:
+          token: ${{ secrets.HBB_COMMON_PRIVATE_REPO_PAT }}
           submodules: recursive
           ref: custom-mods
           
@@ -1224,6 +1298,7 @@ jobs:
       reltype: release
       x86_target: "" # can be ",android-x86"
       suffix: ""
+      
     steps:
       - name: Free Disk Space (Ubuntu)
         uses: jlumbroso/free-disk-space@main
@@ -1242,7 +1317,14 @@ jobs:
           script: |
             core.exportVariable('ACTIONS_CACHE_URL', process.env.ACTIONS_CACHE_URL || '');
             core.exportVariable('ACTIONS_RUNTIME_TOKEN', process.env.ACTIONS_RUNTIME_TOKEN || '');
-
+            
+      - name: Clone private hbb_common local
+        uses: actions/checkout@v4
+        with:
+          repository: frankltr/hbb_common
+          token: ${{ secrets.HBB_COMMON_PRIVATE_REPO_PAT }}
+          path: hbb_common_local_source
+      
       - name: Install dependencies
         run: |
           sudo apt-get update
@@ -1281,6 +1363,7 @@ jobs:
       - name: Checkout source code
         uses: actions/checkout@v4
         with:
+          token: ${{ secrets.HBB_COMMON_PRIVATE_REPO_PAT }}
           submodules: recursive
           ref: custom-mods
           
@@ -1423,6 +1506,7 @@ jobs:
               deb_arch: arm64,
               vcpkg-triplet: arm64-linux,
             }
+      
     steps:
       - name: Export GitHub Actions cache environment variables
         uses: actions/github-script@v6
@@ -1441,10 +1525,18 @@ jobs:
           if [[ "${{ matrix.job.arch }}" == "x86_64" ]]; then
             sudo apt-get install -y qemu-user-static
           fi
-
+            
+      - name: Clone private hbb_common local
+        uses: actions/checkout@v4
+        with:
+          repository: frankltr/hbb_common
+          token: ${{ secrets.HBB_COMMON_PRIVATE_REPO_PAT }}
+          path: hbb_common_local_source
+        
       - name: Checkout source code
         uses: actions/checkout@v4
         with:
+          token: ${{ secrets.HBB_COMMON_PRIVATE_REPO_PAT }}
           submodules: recursive
           ref: custom-mods
           
@@ -1764,6 +1856,7 @@ jobs:
               vcpkg-triplet: arm-linux,
               extra_features: ",unix-file-copy-paste",
             }
+      
     steps:
       - name: Export GitHub Actions cache environment variables
         uses: actions/github-script@v6
@@ -1771,10 +1864,18 @@ jobs:
           script: |
             core.exportVariable('ACTIONS_CACHE_URL', process.env.ACTIONS_CACHE_URL || '');
             core.exportVariable('ACTIONS_RUNTIME_TOKEN', process.env.ACTIONS_RUNTIME_TOKEN || '');
-
+            
+      - name: Clone private hbb_common local
+        uses: actions/checkout@v4
+        with:
+          repository: frankltr/hbb_common
+          token: ${{ secrets.HBB_COMMON_PRIVATE_REPO_PAT }}
+          path: hbb_common_local_source
+      
       - name: Checkout source code
         uses: actions/checkout@v4
         with:
+          token: ${{ secrets.HBB_COMMON_PRIVATE_REPO_PAT }}
           submodules: recursive
           ref: custom-mods
           
@@ -1964,10 +2065,19 @@ jobs:
         job:
           - { target: x86_64-unknown-linux-gnu, arch: x86_64 }
           - { target: aarch64-unknown-linux-gnu, arch: aarch64 }
-    steps:
+      
+    steps:   
+      - name: Clone private hbb_common local
+        uses: actions/checkout@v4
+        with:
+          repository: frankltr/hbb_common
+          token: ${{ secrets.HBB_COMMON_PRIVATE_REPO_PAT }}
+          path: hbb_common_local_source
+      
       - name: Checkout source code
         uses: actions/checkout@v4
         with:
+          token: ${{ secrets.HBB_COMMON_PRIVATE_REPO_PAT }}
           submodules: recursive
           ref: custom-mods
           
@@ -2040,10 +2150,19 @@ jobs:
               arch: aarch64,
               suffix: "",
             }
+      
     steps:
+      - name: Clone private hbb_common local
+        uses: actions/checkout@v4
+        with:
+          repository: frankltr/hbb_common
+          token: ${{ secrets.HBB_COMMON_PRIVATE_REPO_PAT }}
+          path: hbb_common_local_source
+      
       - name: Checkout source code
         uses: actions/checkout@v4
         with:
+          token: ${{ secrets.HBB_COMMON_PRIVATE_REPO_PAT }}
           submodules: recursive
           ref: custom-mods
           
@@ -2100,10 +2219,19 @@ jobs:
       fail-fast: false
     env:
       RELEASE_NAME: web-basic
-    steps:
+      
+    steps:    
+      - name: Clone private hbb_common local
+        uses: actions/checkout@v4
+        with:
+          repository: frankltr/hbb_common
+          token: ${{ secrets.HBB_COMMON_PRIVATE_REPO_PAT }}
+          path: hbb_common_local_source
+      
       - name: Checkout source code
         uses: actions/checkout@v4
         with:
+          token: ${{ secrets.HBB_COMMON_PRIVATE_REPO_PAT }}
           submodules: recursive
           ref: custom-mods
           

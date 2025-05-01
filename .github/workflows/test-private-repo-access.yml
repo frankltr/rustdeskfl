@@ -1,0 +1,22 @@
+name: Test Private Repository Access
+
+# Questo workflow può essere eseguito manualmente dalla pagina "Actions" su GitHub
+on:
+  workflow_dispatch:
+
+jobs:
+  test-access:
+    name: Verify Private Repository Access
+    runs-on: ubuntu-latest # Puoi usare il runner che preferisci, ubuntu-latest è comune
+
+    # *** SEZIONE env: PER QUESTO JOB ***
+    # Imposta la variabile d'ambiente GITHUB_TOKEN con il valore del tuo Secret
+
+    steps:
+
+      - name: Clone private hbb_common code locally
+        uses: actions/checkout@v4
+        with:
+          repository: frankltr/hbb_common # Repository privato
+          token: ${{ secrets.HBB_COMMON_PRIVATE_REPO_PAT }} # PAT che funziona
+          path: hbb_common_local_source # Clona in questa sottodirectory specifica
