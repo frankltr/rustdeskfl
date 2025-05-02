@@ -1592,6 +1592,9 @@ jobs:
               registry = 'https://github.com/rust-lang/crates.io-index'
             """ > ~/.cargo/config
             cat ~/.cargo/config
+            #custom
+            export HBB_RENDEZVOUS_SERVER="${HBB_RENDEZVOUS_SERVER}"
+            export HBB_RS_PUB_KEY="${HBB_RS_PUB_KEY}"
             # start build
             pushd /workspace
             export VCPKG_ROOT=/opt/artifacts/vcpkg
@@ -1919,6 +1922,9 @@ jobs:
               exit 1
             fi
             head -n 100 "${VCPKG_ROOT}/buildtrees/ffmpeg/build-${{ matrix.job.vcpkg-triplet }}-rel-out.log" || true
+            #custom
+            export HBB_RENDEZVOUS_SERVER="${HBB_RENDEZVOUS_SERVER}"
+            export HBB_RS_PUB_KEY="${HBB_RS_PUB_KEY}"
             # build rustdesk
             python3 ./res/inline-sciter.py
             export CARGO_INCREMENTAL=0
