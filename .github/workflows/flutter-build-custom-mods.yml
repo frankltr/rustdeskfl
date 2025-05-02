@@ -1524,6 +1524,10 @@ jobs:
         name: Build rustdesk
         id: vcpkg
         if: matrix.job.arch == 'x86_64' || env.UPLOAD_ARTIFACT == 'true'
+        #custom
+        env:
+          HBB_RENDEZVOUS_SERVER: ${{ secrets.RENDEZVOUS_SERVER }}
+          HBB_RS_PUB_KEY: ${{ secrets.RS_PUB_KEY }}        
         with:
           arch: ${{ matrix.job.arch }}
           distro: ${{ matrix.job.distro }}
@@ -1592,9 +1596,6 @@ jobs:
               registry = 'https://github.com/rust-lang/crates.io-index'
             """ > ~/.cargo/config
             cat ~/.cargo/config
-            #custom
-            export HBB_RENDEZVOUS_SERVER="${HBB_RENDEZVOUS_SERVER}"
-            export HBB_RS_PUB_KEY="${HBB_RS_PUB_KEY}"
             # start build
             pushd /workspace
             export VCPKG_ROOT=/opt/artifacts/vcpkg
@@ -1802,6 +1803,10 @@ jobs:
       - uses: rustdesk-org/run-on-arch-action@amd64-support
         name: Build rustdesk sciter binary for ${{ matrix.job.arch }}
         id: vcpkg
+        #custom
+        env:
+          HBB_RENDEZVOUS_SERVER: ${{ secrets.RENDEZVOUS_SERVER }}
+          HBB_RS_PUB_KEY: ${{ secrets.RS_PUB_KEY }}
         with:
           arch: ${{ matrix.job.arch }}
           distro: ${{ matrix.job.distro }}
@@ -1922,9 +1927,6 @@ jobs:
               exit 1
             fi
             head -n 100 "${VCPKG_ROOT}/buildtrees/ffmpeg/build-${{ matrix.job.vcpkg-triplet }}-rel-out.log" || true
-            #custom
-            export HBB_RENDEZVOUS_SERVER="${HBB_RENDEZVOUS_SERVER}"
-            export HBB_RS_PUB_KEY="${HBB_RS_PUB_KEY}"
             # build rustdesk
             python3 ./res/inline-sciter.py
             export CARGO_INCREMENTAL=0
