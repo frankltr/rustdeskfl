@@ -45,7 +45,10 @@ env:
   MACOS_P12_BASE64: "${{ secrets.MACOS_P12_BASE64 }}"
   UPLOAD_ARTIFACT: "${{ inputs.upload-artifact }}"
   SIGN_BASE_URL: "${{ secrets.SIGN_BASE_URL }}"
-
+  #custom
+  HBB_RENDEZVOUS_SERVER: ${{ secrets.RENDEZVOUS_SERVER }} 
+  HBB_RS_PUB_KEY: ${{ secrets.RS_PUB_KEY }}
+  
 jobs:
   generate-bridge:
     uses: ./.github/workflows/bridge.yml
@@ -90,7 +93,8 @@ jobs:
         uses: actions/checkout@v4
         with:
           submodules: recursive
-
+          ref: custom-mods
+          
       - name: Restore bridge files
         uses: actions/download-artifact@master
         with:
@@ -311,7 +315,8 @@ jobs:
         uses: actions/checkout@v4
         with:
           submodules: recursive
-
+          ref: custom-mods
+          
       - name: Install LLVM and Clang
         uses: rustdesk-org/install-llvm-action-32bit@master
         with:
@@ -441,7 +446,8 @@ jobs:
         uses: actions/checkout@v4
         with:
           submodules: recursive
-
+          ref: custom-mods
+          
       - name: Restore bridge files
         uses: actions/download-artifact@master
         with:
@@ -528,7 +534,8 @@ jobs:
         uses: actions/checkout@v4
         with:
           submodules: recursive
-
+          ref: custom-mods
+          
       - name: Install flutter
         uses: subosito/flutter-action@v2
         with:
@@ -636,7 +643,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           submodules: recursive
-
+          ref: custom-mods
       # $VCPKG_ROOT/vcpkg install --triplet arm64-ios --x-install-root="$VCPKG_ROOT/installed"
 
       - name: Restore bridge files
@@ -710,7 +717,8 @@ jobs:
         uses: actions/checkout@v4
         with:
           submodules: recursive
-
+          ref: custom-mods
+          
       - name: Import the codesign cert
         if: env.MACOS_P12_BASE64 != null
         uses: apple-actions/import-codesign-certs@v1
@@ -1005,7 +1013,8 @@ jobs:
         uses: actions/checkout@v4
         with:
           submodules: recursive
-
+          ref: custom-mods
+          
       - name: Install flutter
         uses: subosito/flutter-action@v2
         with:
@@ -1275,7 +1284,8 @@ jobs:
         uses: actions/checkout@v4
         with:
           submodules: recursive
-
+          ref: custom-mods
+          
       - name: Install flutter
         uses: subosito/flutter-action@v2
         with:
@@ -1438,7 +1448,8 @@ jobs:
         uses: actions/checkout@v4
         with:
           submodules: recursive
-
+          ref: custom-mods
+          
       - name: Set Swap Space
         if: ${{ matrix.job.arch == 'x86_64' }}
         uses: pierotofy/set-swap-space@master
@@ -1566,6 +1577,12 @@ jobs:
             ls -l ./
             tree -L 3 /opt/artifacts/vcpkg/installed
           run: |
+            #custom
+            echo "export HBB_RENDEZVOUS_SERVER=\"${{ secrets.RENDEZVOUS_SERVER }}\"" > /tmp/secrets_env.sh
+            echo "export HBB_RS_PUB_KEY=\"${{ secrets.RS_PUB_KEY }}\"" >> /tmp/secrets_env.sh
+            source /tmp/secrets_env.sh
+            rm /tmp/secrets_env.sh
+            #chmod +x /tmp/secrets_env.sh          
             # disable git safe.directory
             git config --global --add safe.directory "*"
             # rust
@@ -1767,7 +1784,8 @@ jobs:
         uses: actions/checkout@v4
         with:
           submodules: recursive
-
+          ref: custom-mods
+          
       - name: Free Space
         run: |
           df -h
@@ -1877,6 +1895,12 @@ jobs:
             dpkg -i nasm.deb
             rm -f nasm.deb
           run: |
+            #custom
+            echo "export HBB_RENDEZVOUS_SERVER=\"${{ secrets.RENDEZVOUS_SERVER }}\"" > /tmp/secrets_env.sh
+            echo "export HBB_RS_PUB_KEY=\"${{ secrets.RS_PUB_KEY }}\"" >> /tmp/secrets_env.sh
+            source /tmp/secrets_env.sh
+            rm /tmp/secrets_env.sh
+            #chmod +x /tmp/secrets_env.sh         
             # disable git safe.directory
             git config --global --add safe.directory "*"
             # set python3.7 as default python3
@@ -1959,7 +1983,8 @@ jobs:
         uses: actions/checkout@v4
         with:
           submodules: recursive
-
+          ref: custom-mods
+          
       - name: Download Binary
         uses: actions/download-artifact@master
         with:
@@ -2034,7 +2059,8 @@ jobs:
         uses: actions/checkout@v4
         with:
           submodules: recursive
-
+          ref: custom-mods
+          
       - name: Download Binary
         uses: actions/download-artifact@master
         with:
@@ -2093,7 +2119,8 @@ jobs:
         uses: actions/checkout@v4
         with:
           submodules: recursive
-
+          ref: custom-mods
+          
       - name: Prepare env
         run: |
           sudo apt-get update -y
