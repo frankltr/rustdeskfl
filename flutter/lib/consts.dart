@@ -139,6 +139,7 @@ const String kOptionCurrentAbName = "current-ab-name";
 const String kOptionEnableConfirmClosingTabs = "enable-confirm-closing-tabs";
 const String kOptionAllowAlwaysSoftwareRender = "allow-always-software-render";
 const String kOptionEnableCheckUpdate = "enable-check-update";
+const String kOptionAllowAutoUpdate = "allow-auto-update";
 const String kOptionAllowLinuxHeadless = "allow-linux-headless";
 const String kOptionAllowRemoveWallpaper = "allow-remove-wallpaper";
 const String kOptionStopService = "stop-service";
@@ -149,6 +150,7 @@ const String kOptionEnableTrustedDevices = "enable-trusted-devices";
 // buildin opitons
 const String kOptionHideServerSetting = "hide-server-settings";
 const String kOptionHideProxySetting = "hide-proxy-settings";
+const String kOptionHideRemotePrinterSetting = "hide-remote-printer-settings";
 const String kOptionHideSecuritySetting = "hide-security-settings";
 const String kOptionHideNetworkSetting = "hide-network-settings";
 const String kOptionRemovePresetPasswordWarning =

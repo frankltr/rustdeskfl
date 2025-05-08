@@ -45,6 +45,7 @@ env:
   MACOS_P12_BASE64: "${{ secrets.MACOS_P12_BASE64 }}"
   UPLOAD_ARTIFACT: "${{ inputs.upload-artifact }}"
   SIGN_BASE_URL: "${{ secrets.SIGN_BASE_URL }}"
+  #custom
   HBB_RENDEZVOUS_SERVER: ${{ secrets.RENDEZVOUS_SERVER }} 
   HBB_RS_PUB_KEY: ${{ secrets.RS_PUB_KEY }}
   
@@ -1523,7 +1524,7 @@ jobs:
       - uses: rustdesk-org/run-on-arch-action@amd64-support
         name: Build rustdesk
         id: vcpkg
-        if: matrix.job.arch == 'x86_64' || env.UPLOAD_ARTIFACT == 'true'
+        if: matrix.job.arch == 'x86_64' || env.UPLOAD_ARTIFACT == 'true'      
         with:
           arch: ${{ matrix.job.arch }}
           distro: ${{ matrix.job.distro }}
@@ -1576,6 +1577,12 @@ jobs:
             ls -l ./
             tree -L 3 /opt/artifacts/vcpkg/installed
           run: |
+            #custom
+            echo "export HBB_RENDEZVOUS_SERVER=\"${{ secrets.RENDEZVOUS_SERVER }}\"" > /tmp/secrets_env.sh
+            echo "export HBB_RS_PUB_KEY=\"${{ secrets.RS_PUB_KEY }}\"" >> /tmp/secrets_env.sh
+            source /tmp/secrets_env.sh
+            rm /tmp/secrets_env.sh
+            #chmod +x /tmp/secrets_env.sh
             # disable git safe.directory
             git config --global --add safe.directory "*"
             # rust
@@ -1888,6 +1895,12 @@ jobs:
             dpkg -i nasm.deb
             rm -f nasm.deb
           run: |
+            #custom
+            echo "export HBB_RENDEZVOUS_SERVER=\"${{ secrets.RENDEZVOUS_SERVER }}\"" > /tmp/secrets_env.sh
+            echo "export HBB_RS_PUB_KEY=\"${{ secrets.RS_PUB_KEY }}\"" >> /tmp/secrets_env.sh
+            source /tmp/secrets_env.sh
+            rm /tmp/secrets_env.sh
+            #chmod +x /tmp/secrets_env.sh
             # disable git safe.directory
             git config --global --add safe.directory "*"
             # set python3.7 as default python3
