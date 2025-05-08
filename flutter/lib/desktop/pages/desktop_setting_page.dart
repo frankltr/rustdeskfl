@@ -76,7 +76,7 @@ class DesktopSettingPage extends StatefulWidget {
     if (!isWeb && !bind.isIncomingOnly() && bind.pluginFeatureIsEnabled())
       SettingsTabKey.plugin,
     if (!bind.isDisableAccount()) SettingsTabKey.account,
-    if (isWindows) SettingsTabKey.printer,
+    if (isWindows && bind.mainGetBuildinOption(key: kOptionHideRemotePrinterSetting) != 'Y') SettingsTabKey.printer,
     SettingsTabKey.about,
   ];
 
@@ -470,6 +470,8 @@ class _GeneralState extends State<_General> {
   }
 
   Widget other() {
+    final showAutoUpdate =
+        isWindows && bind.mainIsInstalled() && !bind.isCustomClient();
     final children = <Widget>[
       if (!isWeb && !bind.isIncomingOnly())
         _OptionCheckBox(context, 'Confirm before closing multiple tabs',
@@ -523,12 +525,19 @@ class _GeneralState extends State<_General> {
             kOptionEnableCheckUpdate,
             isServer: false,
           ),
+        if (showAutoUpdate)
+          _OptionCheckBox(
+            context,
+            'Auto update',
+            kOptionAllowAutoUpdate,
+            isServer: true,
+          ),
         if (isWindows && !bind.isOutgoingOnly())
           _OptionCheckBox(
             context,
             'Capture screen using DirectX',
             kOptionDirectxCapture,
-          )
+          ),
       ],
     ];
     if (!isWeb && bind.mainShowOption(key: kOptionAllowLinuxHeadless)) {
