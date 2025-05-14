@@ -267,6 +267,16 @@ class RustdeskImpl {
         ]));
   }
 
+  Future<int?> sessionGetTrackpadSpeed(
+      {required UuidValue sessionId, dynamic hint}) {
+    throw UnimplementedError("sessionGetTrackpadSpeed");
+  }
+
+  Future<void> sessionSetTrackpadSpeed(
+      {required UuidValue sessionId, required int value, dynamic hint}) {
+    throw UnimplementedError("sessionSetTrackpadSpeed");
+  }
+
   Future<String?> sessionGetScrollStyle(
       {required UuidValue sessionId, dynamic hint}) {
     return Future(() =>
@@ -1520,15 +1530,20 @@ class RustdeskImpl {
 
   Future<void> mainAccountAuth(
       {required String op, required bool rememberMe, dynamic hint}) {
-    throw UnimplementedError("mainAccountAuth");
+    return Future(() => js.context.callMethod('setByName', [
+          'account_auth',
+          jsonEncode({'op': op, 'remember': rememberMe})
+        ]));
   }
 
   Future<void> mainAccountAuthCancel({dynamic hint}) {
-    throw UnimplementedError("mainAccountAuthCancel");
+    return Future(
+        () => js.context.callMethod('setByName', ['account_auth_cancel']));
   }
 
   Future<String> mainAccountAuthResult({dynamic hint}) {
-    throw UnimplementedError("mainAccountAuthResult");
+    return Future(
+        () => js.context.callMethod('getByName', ['account_auth_result']));
   }
 
   Future<void> mainOnMainWindowClose({dynamic hint}) {
