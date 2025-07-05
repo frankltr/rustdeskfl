@@ -325,10 +325,15 @@ class _ConnectionPageState extends State<ConnectionPage>
 
   /// Callback for the connect button.
   /// Connects to the selected peer.
-  void onConnect({bool isFileTransfer = false, bool isViewCamera = false}) {
+  void onConnect(
+      {bool isFileTransfer = false,
+      bool isViewCamera = false,
+      bool isTerminal = false}) {
     var id = _idController.id;
     connect(context, id,
-        isFileTransfer: isFileTransfer, isViewCamera: isViewCamera);
+        isFileTransfer: isFileTransfer,
+        isViewCamera: isViewCamera,
+        isTerminal: isTerminal);
   }
 
   /// UI for the remote ID TextField.
@@ -525,22 +530,23 @@ class _ConnectionPageState extends State<ConnectionPage>
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Center(
-                    child: Obx(() {
-                      var offset = Offset(0, 0);
-                      return InkWell(
-                        child: _menuOpen.value
-                            ? Transform.rotate(
-                                angle: pi,
-                                child: Icon(IconFont.more, size: 14),
-                              )
-                            : Icon(IconFont.more, size: 14),
-                        onTapDown: (e) {
-                          offset = e.globalPosition;
-                        },
-                        onTap: () async {
-                          _menuOpen.value = true;
-                          final x = offset.dx;
-                          final y = offset.dy;
+                    child: StatefulBuilder(
+                      builder: (context, setState) {
+                        var offset = Offset(0, 0);
+                        return Obx(() => InkWell(
+                          child: _menuOpen.value
+                              ? Transform.rotate(
+                                  angle: pi,
+                                  child: Icon(IconFont.more, size: 14),
+                                )
+                              : Icon(IconFont.more, size: 14),
+                          onTapDown: (e) {
+                            offset = e.globalPosition;
+                          },
+                          onTap: () async {
+                            _menuOpen.value = true;
+                            final x = offset.dx;
+                            final y = offset.dy;
                           await mod_menu
                               .showMenu(
                             context: context,
@@ -553,6 +559,10 @@ class _ConnectionPageState extends State<ConnectionPage>
                               (
                                 'View camera',
                                 () => onConnect(isViewCamera: true)
+                              ),
+                              (
+                                'Terminal',
+                                () => onConnect(isTerminal: true)
                               ),
                             ]
                                 .map((e) => MenuEntryButton<String>(
@@ -581,8 +591,9 @@ class _ConnectionPageState extends State<ConnectionPage>
                             _menuOpen.value = false;
                           });
                         },
-                      );
-                    }),
+                        ));
+                      },
+                    ),
                   ),
                 ),
               ]),
