@@ -38,7 +38,7 @@ env:
   #  https://github.com/rustdesk/rustdesk/actions/runs/14414119794/job/40427970174
   # 2. Update the `VCPKG_COMMIT_ID` in `ci.yml` and `playground.yml`.
   VCPKG_COMMIT_ID: "6f29f12e82a8293156836ad81cc9bf5af41fe836"
-  VERSION: "1.4.1"
+  VERSION: "1.4.2"
   NDK_VERSION: "r27c"
   #signing keys env variable checks
   ANDROID_SIGNING_KEY: "${{ secrets.ANDROID_SIGNING_KEY }}"
@@ -429,8 +429,8 @@ jobs:
           files: |
             ./SignOutput/rustdesk-*.exe
 
+# use build-for-macOS arm64-selfhost
   build-for-macOS-arm64-selfhost:
-    # use build-for-macOS instead
     if: false
     runs-on: [self-hosted, macOS, ARM64]
     needs: [generate-bridge]
@@ -504,6 +504,7 @@ jobs:
           files: |
             rustdesk*-aarch64.dmg
 
+# build rustdesk ios
   build-rustdesk-ios:
     if: ${{ inputs.upload-artifact }}
     name: build rustdesk ios ipa
@@ -624,6 +625,7 @@ jobs:
       #     files: |
       #       flutter/build/ios/ipa/*.ipa
 
+# use build-rustdesk-ios-selfhost
   build-rustdesk-ios-selfhost:
     #if: ${{ inputs.upload-artifact }}
     if: false
@@ -682,6 +684,7 @@ jobs:
       #     files: |
       #       flutter/build/ios/ipa/*.ipa
 
+# use build-for-macOS
   build-for-macOS:
     name: ${{ matrix.job.target }}
     runs-on: ${{ matrix.job.os }}
@@ -699,7 +702,7 @@ jobs:
             }
           - {
               target: aarch64-apple-darwin,
-              os: macos-latest,
+              os: macos-14,
               # extra-build-args: "--disable-flutter-texture-render", # disable this for mac, because we see a lot of users reporting flickering both on arm and x64, and we can not confirm if texture rendering has better performance if htere is no vram, https://github.com/rustdesk/rustdesk/issues/6296
               extra-build-args: "--screencapturekit",
               arch: aarch64,
