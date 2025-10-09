@@ -75,6 +75,9 @@ bool _ignoreDevicePixelRatio = true;
 int windowsBuildNumber = 0;
 DesktopType? desktopType;
 
+// Tolerance used for floating-point position comparisons to avoid precision errors.
+const double _kPositionEpsilon = 1e-6;
+
 bool get isMainDesktopWindow =>
     desktopType == DesktopType.main || desktopType == DesktopType.cm;
 
@@ -104,6 +107,10 @@ enum DesktopType {
   terminal,
   cm,
   portForward,
+}
+
+bool isDoubleEqual(double a, double b) {
+  return (a - b).abs() < _kPositionEpsilon;
 }
 
 class IconFont {
@@ -1852,6 +1859,8 @@ Future<Size> _adjustRestoreMainWindowSize(double? width, double? height) async {
   return Size(restoreWidth, restoreHeight);
 }
 
+// Consider using Rect.contains() instead,
+// though the implementation is not exactly the same.
 bool isPointInRect(Offset point, Rect rect) {
   return point.dx >= rect.left &&
       point.dx <= rect.right &&
@@ -1949,8 +1958,24 @@ Future<bool> restoreWindowPosition(WindowType type,
 
   var lpos = LastWindowPosition.loadFromString(pos);
   if (lpos == null) {
-    debugPrint("no window position saved, ignoring position restoration");
-    return false;
+    debugPrint("No window position saved, trying to center the window.");
+    switch (type) {
+      case WindowType.Main:
+        // Center the main window only if no position is saved (on first run).
+        if (isWindows || isLinux) {
+          await windowManager.center();
+        }
+        // For MacOS, the window is already centered by default.
+        // See https://github.com/rustdesk/rustdesk/blob/9b9276e7524523d7f667fefcd0694d981443df0e/flutter/macos/Runner/Base.lproj/MainMenu.xib#L333
+        // If `<windowPositionMask>` in `<window>` is not set, the window will be centered.
+        break;
+      default:
+        // No need to change the position of a sub window if no position is saved,
+        // since the default position is already centered.
+        // https://github.com/rustdesk/rustdesk/blob/317639169359936f7f9f85ef445ec9774218772d/flutter/lib/utils/multi_window_manager.dart#L163
+        break;
+    }
+    return true;
   }
   if (type == WindowType.RemoteDesktop || type == WindowType.ViewCamera) {
     if (!isRemotePeerPos && windowId != null) {
