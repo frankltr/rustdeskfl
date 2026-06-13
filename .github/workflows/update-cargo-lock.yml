@@ -1,0 +1,75 @@
+name: Update Cargo.lock
+
+# Rigenera il Cargo.lock nel branch custom-mods dopo ogni sync con master.
+# Triggerabile manualmente da GitHub Actions UI.
+
+on:
+  workflow_dispatch:
+    inputs:
+      commit_message:
+        description: 'Commit message per il Cargo.lock aggiornato'
+        required: false
+        default: 'chore: update Cargo.lock after master sync'
+  push:
+    branches:
+      - custom-mods
+    paths:
+      - 'Cargo.toml'
+      - 'libs/**/Cargo.toml'
+
+concurrency:
+  group: update-cargo-lock-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  update-lock:
+    name: Regenerate Cargo.lock
+    runs-on: ubuntu-22.04
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout custom-mods
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          ref: custom-mods
+          token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 1
+
+      - name: Install Rust toolchain (stable)
+        uses: dtolnay/rust-toolchain@e97e2d8cc328f1b50210efc529dca0028893a2d9 # v1
+        with:
+          toolchain: stable
+
+      - name: Install minimal system dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends \
+            libssl-dev \
+            pkg-config
+
+      - name: Run cargo update (regenerate Cargo.lock)
+        # Aggiorna SOLO il lock file senza compilare.
+        # --workspace garantisce che tutti i membri del workspace siano considerati.
+        run: cargo update --workspace
+
+      - name: Check if Cargo.lock has changed
+        id: lock_changed
+        run: |
+          if git diff --quiet Cargo.lock; then
+            echo "changed=false" >> $GITHUB_OUTPUT
+            echo "Cargo.lock invariato, nessun commit necessario."
+          else
+            echo "changed=true" >> $GITHUB_OUTPUT
+            echo "Cargo.lock modificato, procedo con il commit."
+            git diff --stat Cargo.lock
+          fi
+
+      - name: Commit updated Cargo.lock
+        if: steps.lock_changed.outputs.changed == 'true'
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add Cargo.lock
+          git commit -m "${{ github.event.inputs.commit_message || 'chore: update Cargo.lock after master sync' }}"
+          git push origin custom-mods
