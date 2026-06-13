@@ -29,12 +29,13 @@ jobs:
       contents: write
 
     steps:
-      - name: Checkout custom-mods
+      - name: Checkout custom-mods (with submodules)
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
         with:
           ref: custom-mods
           token: ${{ secrets.GITHUB_TOKEN }}
-          fetch-depth: 1
+          submodules: recursive
+          fetch-depth: 0
 
       - name: Install Rust toolchain (stable)
         uses: dtolnay/rust-toolchain@e97e2d8cc328f1b50210efc529dca0028893a2d9 # v1
